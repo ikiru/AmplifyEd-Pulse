@@ -1,0 +1,350 @@
+/* public/css/audience.css */
+
+.aud-shell {
+  max-width: 720px;
+  margin: 0 auto;
+  padding: 24px 16px 40px;
+}
+
+.aud-title {
+  margin: 0;
+  text-align: center;
+  font-size: 1.4rem;
+  font-weight: 600;
+}
+
+.aud-subtitle {
+  margin: 6px 0 24px;
+  text-align: center;
+  font-size: 0.9rem;
+  color: var(--text-muted);
+}
+
+/* ---------- Emoji reactions ---------- */
+
+.aud-reactions {
+  display: flex;
+  justify-content: center;
+  gap: 12px;
+  margin-bottom: 24px;
+  flex-wrap: wrap;
+}
+
+.reaction-btn {
+  min-width: 120px;
+  padding: 10px 16px;
+  border-radius: 999px;
+  border: 1px solid var(--border-subtle);
+  background: radial-gradient(circle at top, #1f2937, #020617);
+  color: var(--text-main);
+  font-size: 0.9rem;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  cursor: pointer;
+  transition: transform 0.08s ease, box-shadow 0.08s ease,
+    border-color 0.08s ease, background 0.1s ease;
+}
+
+.reaction-btn:hover {
+  border-color: var(--accent-amber);
+  box-shadow: 0 8px 20px rgba(0, 0, 0, 0.32);
+}
+
+.reaction-btn:active {
+  transform: translateY(1px);
+}
+
+/* ---------- Compose box ---------- */
+
+.aud-compose {
+  margin-top: 10px;
+  padding-top: 16px;
+  border-top: 1px solid var(--border-subtle);
+}
+
+.aud-compose h2 {
+  font-size: 1rem;
+  margin: 0 0 8px;
+}
+
+#question-form {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+#question-input {
+  width: 100%;
+  min-height: 80px;
+  padding: 10px 12px;
+  border-radius: 10px;
+  border: 1px solid var(--border-subtle);
+  background-color: var(--bg-panel);
+  color: var(--text-main);
+  font-size: 0.9rem;
+  resize: vertical;
+}
+
+#question-input::placeholder {
+  color: var(--text-muted);
+}
+
+#question-form button[type="submit"] {
+  align-self: flex-end;
+  padding: 8px 18px;
+  border-radius: 999px;
+  border: none;
+  background-color: var(--accent-orange);
+  color: #fff;
+  font-size: 0.9rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background 0.08s ease, box-shadow 0.08s ease,
+    transform 0.08s ease;
+}
+
+#question-form button[type="submit"]:hover {
+  background-color: var(--accent-orange-dark);
+  box-shadow: 0 8px 20px rgba(248, 113, 113, 0.2);
+}
+
+#question-form button[type="submit"]:active {
+  transform: translateY(1px);
+}
+
+/* ---------- Live discussion list ---------- */
+
+.aud-discussion {
+  margin-top: 28px;
+}
+
+.aud-discussion h2 {
+  font-size: 1rem;
+  margin: 0 0 10px;
+}
+
+#audience-discussion-list {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+/* individual post card */
+
+.question-item {
+  border-radius: 12px;
+  border: 1px solid var(--border-subtle);
+  background-color: var(--bg-panel-soft);
+  padding: 10px 12px;
+  font-size: 0.9rem;
+}
+
+.question-text {
+  margin-bottom: 6px;
+  line-height: 1.35;
+}
+
+.question-meta {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 8px;
+  font-size: 0.78rem;
+  color: var(--text-muted);
+}
+
+.question-meta span:first-child {
+  white-space: nowrap;
+}
+
+/* vote buttons */
+
+.aud-vote-btn {
+  border: none;
+  background: transparent;
+  color: var(--accent-amber);
+  cursor: pointer;
+  font-size: 0.85rem;
+  padding: 2px 4px;
+}
+
+.aud-vote-btn + .aud-vote-btn {
+  margin-left: 4px;
+}
+
+.aud-vote-btn:hover {
+  filter: brightness(1.2);
+}
+
+/* ---------- Replies ---------- */
+
+.aud-replies {
+  margin-top: 6px;
+  padding-left: 10px;
+  border-left: 1px solid rgba(148, 163, 184, 0.35);
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.aud-reply {
+  font-size: 0.8rem;
+  color: var(--text-main);
+  background-color: rgba(15, 23, 42, 0.9);
+  padding: 4px 6px;
+  border-radius: 6px;
+}
+
+.reply-form {
+  margin-top: 4px;
+  display: flex;
+  gap: 6px;
+}
+
+.reply-form input[type="text"] {
+  flex: 1;
+  min-width: 0;
+  padding: 5px 8px;
+  border-radius: 999px;
+  border: 1px solid var(--border-subtle);
+  background-color: var(--bg-panel);
+  color: var(--text-main);
+  font-size: 0.8rem;
+}
+
+.reply-form input::placeholder {
+  color: var(--text-muted);
+}
+
+.reply-form button {
+  padding: 4px 10px;
+  border-radius: 999px;
+  border: none;
+  background-color: var(--accent-orange);
+  color: #fff;
+  font-size: 0.8rem;
+  cursor: pointer;
+}
+
+.reply-form button:hover {
+  background-color: var(--accent-orange-dark);
+}
+
+/* ---------- Responsive tweaks ---------- */
+
+@media (min-width: 768px) {
+  .aud-shell {
+    padding-top: 40px;
+  }
+
+  .aud-title {
+    font-size: 1.6rem;
+  }
+
+  .aud-reactions {
+    gap: 16px;
+  }
+
+  .reaction-btn {
+    min-width: 140px;
+  }
+}
+/* Overall shell for mobile audience view */
+.aud-shell {
+  min-height: 100vh;
+  padding: 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+/* Section that wraps the live discussion list */
+.aud-discussion {
+  margin-top: 8px;
+  padding: 12px;
+  border-radius: 12px;
+  background-color: rgba(15, 23, 42, 0.9);
+  border: 1px solid rgba(148, 163, 184, 0.45);
+  max-height: 45vh;         /* ⬅ cap height on phone */
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+
+/* The actual scrolling list */
+#audience-discussion-list {
+  margin-top: 8px;
+  flex: 1 1 auto;
+  overflow-y: auto;         /* ⬅ scroll inside */
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  padding-right: 4px;
+}
+
+/* Optional narrower scrollbar on mobile */
+#audience-discussion-list::-webkit-scrollbar {
+  width: 5px;
+}
+#audience-discussion-list::-webkit-scrollbar-thumb {
+  background-color: rgba(148, 163, 184, 0.4);
+  border-radius: 999px;
+}
+@media (max-width: 768px) {
+  /* Reduce outer padding */
+  .aud-shell {
+    padding: 10px;
+    gap: 12px;
+  }
+
+  /* Sticky header for quick reactions */
+  .aud-title,
+  .aud-reactions {
+    position: sticky;
+    top: 0;
+    background: #0f172a;
+    z-index: 10;
+    padding-top: 8px;
+    padding-bottom: 8px;
+  }
+
+  /* Simplify text area & post button */
+  .aud-compose textarea {
+    width: 100%;
+    min-height: 70px;
+    border-radius: 10px;
+    font-size: 0.9rem;
+  }
+
+  .aud-compose button {
+    width: 100%;
+    margin-top: 6px;
+    border-radius: 999px;
+    padding: 10px;
+    font-weight: 600;
+  }
+
+  /* Discussion area: fixed height, scrollable */
+  .aud-discussion {
+    max-height: 50vh;
+    overflow-y: auto;
+    padding: 10px;
+  }
+
+  /* Compact discussion cards */
+  .discussion-item {
+    font-size: 0.85rem;
+    padding: 8px;
+  }
+
+  .discussion-meta {
+    font-size: 0.7rem;
+    flex-wrap: wrap;
+  }
+
+  .discussion-reply {
+    font-size: 0.75rem;
+  }
+}

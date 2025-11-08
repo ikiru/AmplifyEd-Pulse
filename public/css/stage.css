@@ -1,0 +1,361 @@
+/* ===========================
+   STAGE LAYOUT
+   =========================== */
+
+.stage-shell {
+  max-width: 1100px;
+  margin: 16px auto;
+  padding: 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+/* Top header bar */
+
+.stage-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 10px 14px;
+  border-radius: 12px;
+  background: radial-gradient(circle at top left, #1e293b, #020617 70%);
+  border: 1px solid rgba(148, 163, 184, 0.4);
+}
+
+.stage-title {
+  font-size: 1.05rem;
+  font-weight: 600;
+  letter-spacing: 0.04em;
+}
+
+/* Re-use the status pill pattern from theme.css */
+
+.status-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 4px 10px;
+  border-radius: 999px;
+  font-size: 0.8rem;
+  background-color: rgba(15, 23, 42, 0.7);
+  border: 1px solid rgba(148, 163, 184, 0.5);
+}
+
+.status-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 999px;
+  background-color: #22c55e;
+  box-shadow: 0 0 8px #22c55e;
+}
+
+/* Main two-column layout: video + discussion */
+
+.stage-main {
+  display: grid;
+  grid-template-columns: 2fr 1.1fr;
+  gap: 16px;
+  align-items: stretch;
+}
+
+.stage-panel,
+.stage-discussion-panel {
+  background: radial-gradient(circle at top, #020617, #020617 45%, #0b1120);
+  border-radius: 18px;
+  border: 1px solid rgba(148, 163, 184, 0.5);
+  box-shadow: 0 18px 40px rgba(15, 23, 42, 0.75);
+  padding: 12px 14px;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+/* Panel label inside discussion */
+
+.panel-label {
+  font-size: 0.85rem;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  color: rgba(148, 163, 184, 0.9);
+}
+
+/* ===========================
+   VIDEO / SLIDES AREA
+   =========================== */
+
+.stage-panel > .stage-header h2 {
+  font-size: 0.95rem;
+  text-transform: uppercase;
+  letter-spacing: 0.12em;
+  color: rgba(209, 213, 219, 0.95);
+}
+
+.view-toggle {
+  display: flex;
+  gap: 8px;
+}
+
+.toggle-btn {
+  border-radius: 999px;
+  border: 1px solid rgba(148, 163, 184, 0.5);
+  background: rgba(15, 23, 42, 0.6);
+  color: #e5e7eb;
+  font-size: 0.8rem;
+  padding: 4px 10px;
+  cursor: pointer;
+}
+
+.toggle-btn.active {
+  background: #fb923c;
+  border-color: #f97316;
+  color: #0b1120;
+}
+
+/* Container that flips between camera and slides */
+
+#stage-video-inner {
+  position: relative;
+  margin-top: 8px;
+  border-radius: 14px;
+  overflow: hidden;
+  border: 1px dashed rgba(148, 163, 184, 0.4);
+  background: radial-gradient(circle at top, #020617, #020617 40%, #020617);
+  /* 16:9ish */
+  aspect-ratio: 16 / 9;
+  display: flex;
+}
+
+/* Camera & slides views stacked on top of each other */
+
+.camera-view,
+.slides-view {
+  position: absolute;
+  inset: 0;
+  display: none;
+}
+
+/* Show camera in camera-mode, slides in slides-mode */
+
+#stage-video-inner.camera-mode .camera-view {
+  display: flex;
+}
+
+#stage-video-inner.camera-mode .slides-view {
+  display: none;
+}
+
+#stage-video-inner.slides-mode .camera-view {
+  display: none;
+}
+
+#stage-video-inner.slides-mode .slides-view {
+  display: flex;
+}
+
+/* Camera view */
+
+.camera-view {
+  align-items: center;
+  justify-content: center;
+  background: radial-gradient(circle at top, #020617, #020617 40%, #020617);
+}
+
+#stage-camera {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.camera-status {
+  position: absolute;
+  left: 12px;
+  bottom: 10px;
+  font-size: 0.75rem;
+  color: rgba(249, 250, 251, 0.8);
+  background: rgba(15, 23, 42, 0.75);
+  padding: 4px 8px;
+  border-radius: 999px;
+  border: 1px solid rgba(148, 163, 184, 0.5);
+}
+
+/* Slides view */
+
+.slides-view {
+  flex-direction: column;
+  justify-content: space-between;
+  padding: 10px 12px;
+}
+
+.slides-controls {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  gap: 12px;
+  font-size: 0.8rem;
+  color: rgba(209, 213, 219, 0.85);
+}
+
+.slides-btn {
+  border-radius: 999px;
+  border: 1px solid rgba(148, 163, 184, 0.6);
+  background: rgba(15, 23, 42, 0.8);
+  color: #e5e7eb;
+  padding: 2px 10px;
+  cursor: pointer;
+}
+
+.slides-body {
+  flex: 1;
+  margin-top: 8px;
+  border-radius: 10px;
+  background: linear-gradient(to bottom, #020617, #020617 20%, #020617);
+  border: 1px solid rgba(148, 163, 184, 0.4);
+  padding: 14px 16px;
+  overflow: hidden;
+}
+
+.slides-body h2 {
+  font-size: 1.2rem;
+  margin-bottom: 8px;
+}
+
+.slides-body p {
+  font-size: 0.9rem;
+  line-height: 1.4;
+  white-space: pre-line;
+}
+
+/* ===========================
+   DISCUSSION
+   =========================== */
+
+.discussion-list {
+  margin-top: 6px;
+  padding: 8px 4px;
+  border-radius: 10px;
+  background: rgba(15, 23, 42, 0.7);
+  border: 1px solid rgba(148, 163, 184, 0.3);
+  max-height: 420px;
+  overflow-y: auto;
+}
+
+.discussion-empty {
+  font-size: 0.8rem;
+  font-style: italic;
+  color: rgba(148, 163, 184, 0.9);
+}
+
+.discussion-item {
+  border-radius: 10px;
+  border: 1px solid rgba(148, 163, 184, 0.5);
+  padding: 8px 10px;
+  margin-bottom: 8px;
+}
+
+.discussion-text {
+  font-size: 0.9rem;
+  margin-bottom: 4px;
+}
+
+.discussion-meta {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  font-size: 0.75rem;
+  color: rgba(148, 163, 184, 0.9);
+}
+
+.discussion-replies {
+  margin-top: 6px;
+  padding-top: 6px;
+  border-top: 1px dashed rgba(148, 163, 184, 0.4);
+}
+
+.discussion-reply {
+  font-size: 0.8rem;
+  color: rgba(209, 213, 219, 0.9);
+}
+
+/* ===========================
+   PULSE STRIP
+   =========================== */
+
+.stage-pulse {
+  margin-top: 4px;
+  padding: 12px 14px;
+  border-radius: 18px;
+  background: radial-gradient(circle at top, #020617, #020617 45%, #0b1120);
+  border: 1px solid rgba(148, 163, 184, 0.5);
+  box-shadow: 0 18px 40px rgba(15, 23, 42, 0.75);
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.pulse-heading {
+  font-size: 0.9rem;
+  opacity: 0.9;
+}
+
+.pulse-chart-wrapper {
+  position: relative;
+  height: 220px;
+  border-radius: 14px;
+  overflow: hidden;
+  background-image: linear-gradient(
+      rgba(31, 41, 55, 0.25) 1px,
+      transparent 1px
+    ),
+    linear-gradient(90deg, rgba(31, 41, 55, 0.25) 1px, transparent 1px);
+  background-size: 100% 32px, 40px 100%;
+}
+
+.pulse-chart-wrapper canvas {
+  width: 100% !important;
+  height: 100% !important;
+}
+
+.control-bar {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  font-size: 0.85rem;
+}
+
+.pulse-value {
+  padding: 6px 10px;
+  border-radius: 999px;
+  background-color: rgba(15, 23, 42, 0.9);
+  border: 1px solid rgba(148, 163, 184, 0.5);
+  font-size: 0.8rem;
+}
+
+.legend-dot {
+  display: inline-block;
+  width: 10px;
+  height: 10px;
+  border-radius: 999px;
+  margin-right: 4px;
+}
+
+/* ===========================
+   RESPONSIVE
+   =========================== */
+
+@media (max-width: 900px) {
+  .stage-main {
+    grid-template-columns: 1fr;
+  }
+
+  .stage-panel,
+  .stage-discussion-panel {
+    min-height: 260px;
+  }
+
+  .stage-pulse {
+    margin-top: 8px;
+  }
+}
+
+

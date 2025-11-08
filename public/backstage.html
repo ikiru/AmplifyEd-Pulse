@@ -1,0 +1,60 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>AmplifyEd – Backstage</title>
+
+  <link rel="stylesheet" href="css/theme.css" />
+  <link rel="stylesheet" href="css/backstage.css" />
+
+  <script src="/socket.io/socket.io.js"></script>
+</head>
+<body>
+  <div class="backstage-shell">
+    <header class="backstage-header">
+      <div class="backstage-title">AmplifyEd – Backstage</div>
+      <div class="backstage-subtitle">Configure slides & session options</div>
+    </header>
+
+    <main class="backstage-main">
+      <!-- Slide embed config card -->
+      <section class="bs-card">
+        <h2>Slide deck connection</h2>
+        <p class="bs-help">
+          Paste an <strong>embed URL</strong> from Google Slides or PowerPoint Online.
+          The <strong>Stage View</strong> will show this deck in the Slides mode.
+        </p>
+
+        <label class="bs-label" for="slides-url-input">
+          Embed URL
+        </label>
+        <input
+          id="slides-url-input"
+          class="bs-input"
+          type="url"
+          placeholder="https://docs.google.com/presentation/d/e/.../embed?..."
+        />
+
+        <button id="slides-url-save" class="bs-button">Save deck URL</button>
+
+        <p id="slides-url-status" class="bs-status"></p>
+
+        <div class="bs-note">
+          <h3>How to get an embed URL</h3>
+          <ul>
+            <li>
+              <strong>Google Slides:</strong> File → Share → <em>Publish to web</em> → Embed → copy the <code>src</code> URL.
+            </li>
+            <li>
+              <strong>PowerPoint Online (OneDrive):</strong> File → Share → <em>Embed</em> → copy the <code>src</code> URL.
+            </li>
+          </ul>
+        </div>
+      </section>
+    </main>
+  </div>
+
+  <script src="backstage.js"></script>
+</body>
+</html>

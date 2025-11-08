@@ -1,0 +1,113 @@
+/* public/css/theme.css
+   Shared tokens + base layout for dashboard + audience
+*/
+
+:root {
+  /* Colors */
+  --bg-main: #0f172a;           /* page background */
+  --bg-elevated: #020617;       /* cards / panels */
+  --bg-elevated-soft: #111827;
+
+  --border-subtle: rgba(148, 163, 184, 0.35);
+  --border-strong: rgba(148, 163, 184, 0.6);
+
+  --text-main: #e5e7eb;         /* default text */
+  --text-muted: #9ca3af;        /* secondary text */
+  --text-soft: rgba(148, 163, 184, 0.85);
+
+  --accent-orange: #f97316;
+  --accent-orange-dark: #ea580c;
+
+  --accent-green: #22c55e;
+  --accent-cyan: #22d3ee;
+  --accent-red: #ef4444;
+
+  --radius-lg: 16px;
+  --radius-md: 12px;
+  --radius-pill: 999px;
+
+  --shadow-soft: 0 18px 40px rgba(15, 23, 42, 0.7);
+}
+
+/* ---------- Global resets ---------- */
+
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+}
+
+html,
+body {
+  margin: 0;
+  padding: 0;
+  height: 100%;        /* ⬅ important for flex-based layouts */
+}
+
+body {
+  background-color: var(--bg-main);
+  color: var(--text-main);
+  font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI",
+    sans-serif;
+  -webkit-font-smoothing: antialiased;
+}
+
+
+/* Make sure default text is light everywhere unless overridden on purpose */
+body,
+body p,
+body span,
+body label,
+body li,
+body h1,
+body h2,
+body h3,
+body h4,
+body h5,
+body h6 {
+  color: var(--text-main);
+}
+
+/* Muted helper class */
+.text-muted {
+  color: var(--text-muted);
+}
+
+/* Buttons – keep readable text */
+button {
+  font-family: inherit;
+}
+
+/* Orange pill buttons (e.g., "Mark answered") */
+.btn-pill-orange {
+  background-color: var(--accent-orange);
+  color: #ffffff;
+  border-radius: var(--radius-pill);
+  border: none;
+  padding: 6px 14px;
+  font-size: 0.8rem;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.btn-pill-orange:hover {
+  background-color: var(--accent-orange-dark);
+}
+
+/* Panels (used on dashboard layout) */
+
+.panel {
+  background: radial-gradient(circle at top, var(--bg-elevated-soft), var(--bg-elevated));
+  border-radius: var(--radius-lg);
+  border: 1px solid var(--border-subtle);
+  box-shadow: var(--shadow-soft);
+}
+
+/* Small labels like "VIDEO", "LIVE DISCUSSION" */
+.panel-label {
+  font-size: 0.8rem;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--text-muted);
+}
+
