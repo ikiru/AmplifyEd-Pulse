@@ -12,10 +12,52 @@ document.addEventListener("DOMContentLoaded", () => {
   /* ------------------ Reactions (This hits / Meh / Not landing) ------------------ */
 
   const reactionButtons = document.querySelectorAll("[data-reaction]");
+  const reactionStatus = document.getElementById("reaction-status");
+  const replyStatus = document.getElementById("reply-status");
+  const REACTION_COOLDOWN_MS = 1200;
+  let reactionCooldown = false;
+  let reactionCooldownTimer = null;
+
+  const toggleReactionControls = (disabled) => {
+    reactionButtons.forEach((btn) => {
+      btn.disabled = disabled;
+      btn.setAttribute("aria-disabled", disabled ? "true" : "false");
+    });
+  };
+
+  const setReactionStatus = (message, isError = false) => {
+    if (!reactionStatus) return;
+    reactionStatus.textContent = message || "";
+    reactionStatus.classList.toggle("error", !!isError);
+  };
+
+  const setReplyStatus = (message, isError = false) => {
+    if (!replyStatus) return;
+    replyStatus.textContent = message || "";
+    replyStatus.classList.toggle("error", !!isError);
+  };
+
+  const startReactionCooldown = () => {
+    reactionCooldown = true;
+    toggleReactionControls(true);
+    if (reactionCooldownTimer) clearTimeout(reactionCooldownTimer);
+    reactionCooldownTimer = setTimeout(() => {
+      reactionCooldown = false;
+      toggleReactionControls(false);
+    }, REACTION_COOLDOWN_MS);
+  };
+
   reactionButtons.forEach((btn) => {
     btn.addEventListener("click", () => {
+      if (reactionCooldown) {
+        setReactionStatus("Give it a second before changing your reaction again.");
+        return;
+      }
+
       const value = Number(btn.dataset.reaction || 0);
       socket.emit("reaction", { value });
+      startReactionCooldown();
+      setReactionStatus("Reaction recorded. Thanks!");
     });
   });
 
@@ -165,6 +207,23 @@ document.addEventListener("DOMContentLoaded", () => {
   socket.on("questionsUpdate", (payload) => {
     const posts = (payload && payload.questions) || [];
     renderDiscussion(posts);
+  });
+
+  socket.on("reactionLimit", (payload) => {
+    setReactionStatus(
+      (payload && payload.message) ||
+        "Hold up a second before changing your reaction again.",
+      true
+    );
+    startReactionCooldown();
+  });
+
+  socket.on("replyLimit", (payload) => {
+    setReplyStatus(
+      (payload && payload.message) ||
+        "Hold up a moment before adding another reply.",
+      true
+    );
   });
 });
 

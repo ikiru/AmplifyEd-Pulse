@@ -30,6 +30,24 @@
   flex-wrap: wrap;
 }
 
+.reaction-status {
+  min-height: 20px;
+  text-align: center;
+  font-size: 0.78rem;
+  color: rgba(148, 163, 184, 0.9);
+}
+
+.reaction-status.error {
+  color: #f87171;
+}
+
+.reply-status {
+  min-height: 18px;
+  font-size: 0.75rem;
+  text-align: center;
+  color: rgba(148, 163, 184, 0.85);
+}
+
 .reaction-btn {
   min-width: 120px;
   padding: 10px 16px;

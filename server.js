@@ -20,6 +20,10 @@ app.get("/", (req, res) => {
 
 // audienceReactions: socketId -> reaction (-1, 0, 1)
 const audienceReactions = new Map();
+const audienceReactionTimestamps = new Map();
+const REACTION_THROTTLE_MS = 1200;
+const replyTimestamps = new Map();
+const REPLY_THROTTLE_MS = 5000;
 let currentPulse = 0;
 
 function recomputePulseAndBroadcast() {
@@ -80,8 +84,18 @@ io.on("connection", (socket) => {
     const v = Number(payload.value);
     if (Number.isNaN(v)) return;
 
+    const now = Date.now();
+    const lastReaction = audienceReactionTimestamps.get(socket.id) || 0;
+    if (now - lastReaction < REACTION_THROTTLE_MS) {
+      socket.emit("reactionLimit", {
+        message: "Hold up a second before changing the pulse again.",
+      });
+      return;
+    }
+
     const clamped = Math.max(-1, Math.min(1, v));
     audienceReactions.set(socket.id, clamped);
+    audienceReactionTimestamps.set(socket.id, now);
     recomputePulseAndBroadcast();
   });
 
@@ -119,6 +133,13 @@ io.on("connection", (socket) => {
 
   socket.on("addReply", ({ parentId, text }) => {
     if (!parentId || !text) return;
+    const lastReply = replyTimestamps.get(socket.id) || 0;
+    if (Date.now() - lastReply < REPLY_THROTTLE_MS) {
+      socket.emit("replyLimit", {
+        message: "Give it a moment before posting another reply.",
+      });
+      return;
+    }
     const parent = questions.find((p) => p.id === parentId);
     if (!parent) return;
 
@@ -131,6 +152,7 @@ io.on("connection", (socket) => {
       text: trimmed,
       createdAt: Date.now(),
     });
+    replyTimestamps.set(socket.id, Date.now());
 
     broadcastQuestions();
   });
@@ -161,6 +183,8 @@ io.on("connection", (socket) => {
       audienceReactions.delete(socket.id);
       recomputePulseAndBroadcast();
     }
+    audienceReactionTimestamps.delete(socket.id);
+    replyTimestamps.delete(socket.id);
   });
 });
 

@@ -357,5 +357,52 @@
     margin-top: 8px;
   }
 }
+/* Slides view */
 
+.slides-view {
+  flex-direction: column;
+  justify-content: space-between;
+  padding: 10px 12px;
+}
 
+.slides-controls {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  gap: 12px;
+  font-size: 0.8rem;
+  color: rgba(209, 213, 219, 0.85);
+}
+
+/* New: iframe + placeholder */
+
+.slides-body {
+  flex: 1;
+  margin-top: 8px;
+  border-radius: 10px;
+  background: #020617;
+  border: 1px solid rgba(148, 163, 184, 0.4);
+  padding: 0;
+  position: relative;
+  overflow: hidden;
+}
+
+.slides-iframe {
+  width: 100%;
+  height: 100%;
+  border: none;
+  border-radius: 10px;
+  display: none; /* hidden until we have a URL */
+}
+
+.slides-placeholder {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 12px;
+  text-align: center;
+  font-size: 0.85rem;
+  color: rgba(148, 163, 184, 0.95);
+}

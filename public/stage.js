@@ -399,16 +399,7 @@ const VideoModule = (() => {
           minute: "2-digit",
         })} · score ${score >= 0 ? "+" + score : score} · 👍 ${likes} · 👎 ${dislikes}`;
 
-        const btn = document.createElement("button");
-        btn.textContent = post.answered ? "Answered" : "Mark answered";
-        btn.disabled = !!post.answered;
-        btn.className = "btn-pill-orange";
-        btn.addEventListener("click", () => {
-          socket.emit("markQuestionAnswered", { id: post.id });
-        });
-
         metaDiv.appendChild(infoSpan);
-        metaDiv.appendChild(btn);
 
         item.appendChild(textDiv);
         item.appendChild(metaDiv);
