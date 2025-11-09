@@ -39,6 +39,7 @@ const VideoModule = (() => {
   const slidesIframe = document.getElementById("slides-iframe");
   const slidesPlaceholder = document.getElementById("slides-placeholder");
   const slidesIndicator = document.getElementById("slides-indicator");
+  const focusTextEl = document.getElementById("stage-focus-text");
 
   if (!root || !videoEl) {
     return { init: () => {} };
@@ -112,6 +113,13 @@ const VideoModule = (() => {
     }
   }
 
+  function updateStageFocus(focus) {
+    if (!focusTextEl) return;
+    focusTextEl.textContent = focus
+      ? focus
+      : "No focus set yet. Update the focus text from Backstage to announce what the audience should pay attention to.";
+  }
+
   function init() {
     // Default view: camera
     showView("camera");
@@ -135,6 +143,11 @@ const VideoModule = (() => {
     socket.on("slideEmbedConfig", (payload) => {
       const url = (payload && payload.url) || "";
       applySlideConfig(url);
+    });
+
+    socket.on("stageFocusUpdate", (payload) => {
+      const focus = (payload && payload.focus) || "";
+      updateStageFocus(focus);
     });
 
     window.addEventListener("beforeunload", () => {

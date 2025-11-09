@@ -45,6 +45,7 @@ function recomputePulseAndBroadcast() {
 // ----------- Slide deck embed URL (Backstage → Stage) -----------
 // e.g. Google Slides / PowerPoint Online embed URL
 let slideEmbedUrl = ""; // empty means "no deck connected yet"
+let stageFocusText = "";
 
 // ----------- Live discussion state -----------
 
@@ -77,6 +78,7 @@ io.on("connection", (socket) => {
 
   // NEW: send current slide embed config
   socket.emit("slideEmbedConfig", { url: slideEmbedUrl || null });
+  socket.emit("stageFocusUpdate", { focus: stageFocusText || null });
 
   // ---- Pulse / reactions ----
   socket.on("reaction", (payload) => {
@@ -174,6 +176,13 @@ io.on("connection", (socket) => {
 
     // Broadcast to all clients (Stage + Backstage, etc.)
     io.emit("slideEmbedConfig", { url: slideEmbedUrl || null });
+  });
+
+  socket.on("setStageFocus", ({ focus }) => {
+    if (typeof focus !== "string") return;
+    const trimmed = focus.trim();
+    stageFocusText = trimmed;
+    io.emit("stageFocusUpdate", { focus: stageFocusText || null });
   });
 
   // ---- Disconnect ----
