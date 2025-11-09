@@ -3,6 +3,7 @@ const path = require("path");
 const express = require("express");
 const fs = require("fs");
 const http = require("http");
+const axios = require("axios");
 const { Server } = require("socket.io");
 
 const app = express();
@@ -67,6 +68,22 @@ app.post("/api/yesand/log", (req, res) => {
   // Persist a new CSV row under data/yesand_feedback_log.csv for future training insights.
   fs.appendFileSync(logPath, row, "utf8");
   res.json({ status: "ok" });
+});
+
+// Proxy route that talks to the Python classifier service so the browser only hits this backend.
+app.post("/api/ai/classify", async (req, res) => {
+  const { comment } = req.body;
+  if (!comment || typeof comment !== "string" || !comment.trim()) {
+    return res.status(400).json({ error: "Comment is required." });
+  }
+
+  try {
+    const classification = await axios.post("http://localhost:8001/classify", { comment }, { timeout: 6000 });
+    return res.json(classification.data);
+  } catch (error) {
+    console.error("AI classification failed:", error.message);
+    return res.status(503).json({ error: "AI service unavailable" });
+  }
 });
 
 // Default route -> stage view

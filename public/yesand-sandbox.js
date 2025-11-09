@@ -41,6 +41,7 @@ const rewritePanel = document.getElementById("rewritePanel");
 const trainerImprovement = document.getElementById("trainerImprovement");
 const submitFeedbackBtn = document.getElementById("submitFeedbackBtn");
 const feedbackStatus = document.getElementById("feedbackStatus");
+const scoreList = document.getElementById("scoreList");
 
 const sanitize = (value) =>
   value ? value.replace(/</g, "&lt;").replace(/>/g, "&gt;") : "";
@@ -162,6 +163,30 @@ function revealRewritePanel() {
   feedbackStatus.textContent = "";
 }
 
+function clearScoreBoard() {
+  if (!scoreList) return;
+  scoreList.innerHTML = `<p>No scores yet.</p>`;
+}
+
+function renderScoreBoard(scores = {}) {
+  if (!scoreList) return;
+  const sorted = Object.entries(scores).sort(([, a], [, b]) => b - a);
+  if (!sorted.length) {
+    clearScoreBoard();
+    return;
+  }
+  scoreList.innerHTML = sorted
+    .map(
+      ([label, value]) => `
+        <div class="score-item">
+          <span>${sanitize(label)}</span>
+          <span>${(value * 100).toFixed(1)}%</span>
+        </div>
+      `
+    )
+    .join("");
+}
+
 const updateCsvStatus = (count = 0) => {
   csvStatus.textContent = count
     ? `Loaded ${count} message${count === 1 ? "" : "s"}`
@@ -184,6 +209,7 @@ function loadNextCsvMessage() {
   currentSuggestionText = "";
   feedbackLogged = false;
   resetFeedbackUI();
+  clearScoreBoard();
 }
 
 function handleCsvUpload(event) {
@@ -193,6 +219,7 @@ function handleCsvUpload(event) {
     currentCsvIndex = 0;
     nextMessageBtn.disabled = true;
     updateCsvStatus(0);
+    clearScoreBoard();
     return;
   }
 
@@ -205,6 +232,7 @@ function handleCsvUpload(event) {
       nextMessageBtn.disabled = true;
       updateCsvStatus(0);
       csvStatus.textContent = "No valid rows found";
+      clearScoreBoard();
       return;
     }
 
@@ -280,38 +308,44 @@ async function handleGenerate() {
   generateBtn.textContent = "Generating...";
 
   try {
-    const response = await fetch("/api/yesand/generate", {
+    const response = await fetch("/api/ai/classify", {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
       },
-      body: JSON.stringify({ teacherMessage, category }),
+      body: JSON.stringify({ comment: teacherMessage }),
     });
 
     if (!response.ok) {
-      throw new Error("Could not generate suggestion. Please try again.");
+      throw new Error("Could not reach AI classifier. Is the Python service running?");
     }
 
     const payload = await response.json();
-    const suggestion = payload.suggestion || "No suggestion provided.";
-    const activeCategory = payload.category || category;
+    const label = payload.label || "none";
+    const scores = payload.scores || {};
+    const displaySuggestion = `Classifier predicts: ${label}`;
 
-    suggestionText.textContent = suggestion;
-    categoryBadge.textContent = `Category: ${activeCategory}`;
-    setTrainerView(teacherMessage, activeCategory, suggestion);
+    suggestionText.textContent = displaySuggestion;
+    categoryBadge.textContent = `Category: ${label}`;
+    setTrainerView(teacherMessage, label, displaySuggestion);
     currentTeacherMessage = teacherMessage;
-    currentModelCategory = activeCategory;
-    currentSuggestionText = suggestion;
+    currentModelCategory = label;
+    currentSuggestionText = displaySuggestion;
     feedbackLogged = false;
     resetFeedbackUI();
+    renderScoreBoard(scores);
+    if (CATEGORIES.includes(label)) {
+      categorySelect.value = label;
+    }
     addToHistory({
       teacher: teacherMessage,
-      category: activeCategory,
-      suggestion: snapshotSuggestion(suggestion, 90),
+      category: label,
+      suggestion: snapshotSuggestion(displaySuggestion, 90),
     });
     teacherInput.value = "";
   } catch (err) {
     errorMessage.textContent = err.message;
+    clearScoreBoard();
   } finally {
     generateBtn.disabled = false;
     generateBtn.textContent = "Generate Yes, and... Suggestion";
