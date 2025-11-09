@@ -1,6 +1,7 @@
 // server.js
 const path = require("path");
 const express = require("express");
+const fs = require("fs");
 const http = require("http");
 const { Server } = require("socket.io");
 
@@ -8,8 +9,65 @@ const app = express();
 const server = http.createServer(app);
 const io = new Server(server);
 
+app.use(express.json());
+
 // ----------- Static files -----------
 app.use(express.static(path.join(__dirname, "public")));
+
+// YesAndAI training sandbox (standalone page)
+app.get("/yesand-sandbox", (req, res) => {
+  res.sendFile(path.join(__dirname, "public", "yesand-sandbox.html"));
+});
+
+app.post("/api/yesand/generate", (req, res) => {
+  const { teacherMessage, category } = req.body;
+  if (!teacherMessage || typeof teacherMessage !== "string" || !teacherMessage.trim()) {
+    return res.status(400).json({ error: "Teacher message is required." });
+  }
+
+  const suggestion =
+    "Yes, and I really appreciate you naming that. It sounds like you're noticing something important, and staying curious together keeps the door open.";
+
+  // TODO: Replace this stub with a real call to an AI model (e.g., OpenAI) later.
+  return res.json({
+    suggestion,
+    category: category || "none",
+  });
+});
+
+app.post("/api/yesand/log", (req, res) => {
+  const logDir = path.join(__dirname, "data");
+  const logPath = path.join(logDir, "yesand_feedback_log.csv");
+  const headers =
+    "teacherMessage,modelCategory,correctedCategory,suggestion,rating,trainerRevision,timestamp\n";
+  const {
+    teacherMessage,
+    modelCategory,
+    correctedCategory,
+    suggestion,
+    rating,
+    trainerRevision,
+  } = req.body;
+
+  if (!fs.existsSync(logDir)) {
+    fs.mkdirSync(logDir, { recursive: true });
+  }
+
+  if (!fs.existsSync(logPath)) {
+    fs.writeFileSync(logPath, headers, "utf8");
+  }
+
+  const escape = (value = "") => `"${String(value).replace(/"/g, '""')}"`;
+  const row = `${escape(teacherMessage)},${escape(modelCategory)},${escape(
+    correctedCategory
+  )},${escape(suggestion)},${escape(rating)},${escape(trainerRevision)},${escape(
+    new Date().toISOString()
+  )}\n`;
+
+  // Persist a new CSV row under data/yesand_feedback_log.csv for future training insights.
+  fs.appendFileSync(logPath, row, "utf8");
+  res.json({ status: "ok" });
+});
 
 // Default route -> stage view
 app.get("/", (req, res) => {
