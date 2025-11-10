@@ -1,4 +1,4 @@
-/* public/css/audience.css */
+﻿/* public/css/audience.css */
 
 .aud-shell {
   max-width: 720px;
@@ -20,14 +20,64 @@
   color: var(--text-muted);
 }
 
-/* ---------- Emoji reactions ---------- */
+/* ---------- Pulse buttons ---------- */
 
-.aud-reactions {
+.pulse-buttons {
   display: flex;
   justify-content: center;
-  gap: 12px;
-  margin-bottom: 24px;
+  gap: 0.75rem;
+  margin: 1.25rem 0;
   flex-wrap: wrap;
+}
+
+.pulse-button {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.55rem 1.25rem;
+  border: none;
+  border-radius: 9999px;
+  font-size: 0.95rem;
+  font-weight: 500;
+  background: rgba(255, 255, 255, 0.08);
+  color: #f2f2f2;
+  cursor: pointer;
+  transition: all 0.2s ease-in-out;
+  box-shadow: 0 0 0 transparent;
+}
+
+.pulse-button:hover,
+.pulse-button:focus {
+  background: rgba(255, 255, 255, 0.15);
+  box-shadow: 0 0 10px rgba(255, 165, 0, 0.35);
+  transform: translateY(-1px);
+}
+
+.pulse-icon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 1.05rem;
+}
+
+.pulse-positive {
+  background-color: rgba(255, 102, 0, 0.15);
+}
+
+.pulse-neutral {
+  background-color: rgba(255, 255, 255, 0.08);
+}
+
+.pulse-negative {
+  background-color: rgba(100, 149, 237, 0.15);
+}
+
+.pulse-positive:hover {
+  background-color: rgba(255, 102, 0, 0.25);
+}
+
+.pulse-negative:hover {
+  background-color: rgba(100, 149, 237, 0.25);
 }
 
 .reaction-status {
@@ -48,30 +98,34 @@
   color: rgba(148, 163, 184, 0.85);
 }
 
-.reaction-btn {
-  min-width: 120px;
-  padding: 10px 16px;
-  border-radius: 999px;
-  border: 1px solid var(--border-subtle);
-  background: radial-gradient(circle at top, #1f2937, #020617);
-  color: var(--text-main);
-  font-size: 0.9rem;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  gap: 6px;
-  cursor: pointer;
-  transition: transform 0.08s ease, box-shadow 0.08s ease,
-    border-color 0.08s ease, background 0.1s ease;
+/* ---------- Responsive discussion panel ---------- */
+
+.audience-panel {
+  max-width: 900px;
+  margin: 0 auto;
+  padding: 0 1rem 1.5rem;
 }
 
-.reaction-btn:hover {
-  border-color: var(--accent-amber);
-  box-shadow: 0 8px 20px rgba(0, 0, 0, 0.32);
+.discussion-message {
+  width: 100%;
 }
 
-.reaction-btn:active {
-  transform: translateY(1px);
+@media (max-width: 600px) {
+  .discussion-footer {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 0.25rem;
+  }
+
+  .discussion-controls {
+    align-self: flex-end;
+    gap: 0.35rem;
+  }
+
+  .vote-button,
+  .reply-button {
+    padding: 0.25rem 0.45rem;
+  }
 }
 
 /* ---------- Compose box ---------- */
@@ -269,55 +323,78 @@
     min-width: 140px;
   }
 }
-/* Overall shell for mobile audience view */
-.aud-shell {
-  min-height: 100vh;
-  padding: 16px;
+/* ---------- Audience live discussion card ---------- */
+.audience-discussion {
+  margin-top: 10px;
+  padding: 18px;
+  border-radius: var(--radius-lg);
+  background: radial-gradient(circle at top, rgba(15, 23, 42, 0.95), rgba(2, 6, 23, 0.92));
+  border: 1px solid var(--border-subtle);
+  box-shadow: 0 18px 40px rgba(2, 6, 23, 0.85);
   display: flex;
   flex-direction: column;
-  gap: 16px;
+  gap: 14px;
 }
 
-/* Section that wraps the live discussion list */
-.aud-discussion {
-  margin-top: 8px;
-  padding: 12px;
-  border-radius: 12px;
-  background-color: rgba(15, 23, 42, 0.9);
-  border: 1px solid rgba(148, 163, 184, 0.45);
-  max-height: 45vh;         /* ⬅ cap height on phone */
+.audience-discussion h2 {
+  margin: 0;
+  font-size: 1.05rem;
+}
+
+.audience-discussion h3 {
+  margin: 0;
+  font-size: 0.85rem;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: rgba(226, 232, 240, 0.75);
+}
+
+.discussion-input-row {
   display: flex;
   flex-direction: column;
-  overflow: hidden;
+  gap: 12px;
 }
 
-/* The actual scrolling list */
-#audience-discussion-list {
-  margin-top: 8px;
-  flex: 1 1 auto;
-  overflow-y: auto;         /* ⬅ scroll inside */
-  display: flex;
-  flex-direction: column;
-  gap: 6px;
-  padding-right: 4px;
+#audience-discussion-input {
+  width: 100%;
+  min-height: 110px;
+  padding: 12px 14px;
+  border-radius: var(--radius-md);
+  border: 1px solid var(--border-subtle);
+  background-color: rgba(15, 23, 42, 0.8);
+  color: var(--text-main);
+  font-size: 0.95rem;
+  resize: vertical;
 }
 
-/* Optional narrower scrollbar on mobile */
-#audience-discussion-list::-webkit-scrollbar {
-  width: 5px;
+#audience-discussion-input::placeholder {
+  color: var(--text-muted);
 }
-#audience-discussion-list::-webkit-scrollbar-thumb {
-  background-color: rgba(148, 163, 184, 0.4);
-  border-radius: 999px;
+
+.discussion-input-row button {
+  align-self: flex-end;
+  padding: 10px 20px;
+  border-radius: var(--radius-pill);
+  border: none;
+  background-color: var(--accent-orange);
+  color: #ffffff;
+  font-size: 0.9rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background 0.12s ease, transform 0.12s ease;
 }
+
+.discussion-input-row button:hover {
+  background-color: var(--accent-orange-dark);
+  transform: translateY(-1px);
+}
+
 @media (max-width: 768px) {
-  /* Reduce outer padding */
   .aud-shell {
     padding: 10px;
     gap: 12px;
   }
 
-  /* Sticky header for quick reactions */
   .aud-title,
   .aud-reactions {
     position: sticky;
@@ -328,41 +405,14 @@
     padding-bottom: 8px;
   }
 
-  /* Simplify text area & post button */
-  .aud-compose textarea {
+  #audience-discussion-input {
+    min-height: 90px;
+  }
+
+  .discussion-input-row button {
     width: 100%;
-    min-height: 70px;
-    border-radius: 10px;
-    font-size: 0.9rem;
-  }
-
-  .aud-compose button {
-    width: 100%;
-    margin-top: 6px;
-    border-radius: 999px;
-    padding: 10px;
-    font-weight: 600;
-  }
-
-  /* Discussion area: fixed height, scrollable */
-  .aud-discussion {
-    max-height: 50vh;
-    overflow-y: auto;
-    padding: 10px;
-  }
-
-  /* Compact discussion cards */
-  .discussion-item {
-    font-size: 0.85rem;
-    padding: 8px;
-  }
-
-  .discussion-meta {
-    font-size: 0.7rem;
-    flex-wrap: wrap;
-  }
-
-  .discussion-reply {
-    font-size: 0.75rem;
+    align-self: stretch;
+    padding: 12px;
   }
 }
+

@@ -1,17 +1,21 @@
 // public/script-audience.js
-/* global io */
 
-document.addEventListener("DOMContentLoaded", () => {
-  const socket = io();
+function loadSocketIoClient() {
+  if (window.io) {
+    return Promise.resolve(window.io);
+  }
 
-  // Identify this client as an audience member (optional but nice)
-  socket.on("connect", () => {
-    socket.emit("registerRole", "audience");
+  return new Promise((resolve, reject) => {
+    const script = document.createElement("script");
+    script.src = "/socket.io/socket.io.js";
+    script.onload = () => resolve(window.io);
+    script.onerror = () => reject(new Error("Unable to load Socket.IO"));
+    document.head.appendChild(script);
   });
+}
 
-  /* ------------------ Reactions (This hits / Meh / Not landing) ------------------ */
-
-  const reactionButtons = document.querySelectorAll("[data-reaction]");
+function setupInteractionHandlers(socket) {
+  const reactionButtons = document.querySelectorAll(".pulse-button");
   const reactionStatus = document.getElementById("reaction-status");
   const replyStatus = document.getElementById("reply-status");
   const REACTION_COOLDOWN_MS = 1200;
@@ -47,6 +51,12 @@ document.addEventListener("DOMContentLoaded", () => {
     }, REACTION_COOLDOWN_MS);
   };
 
+  const reactionValueMap = {
+    positive: 1,
+    neutral: 0,
+    negative: -1,
+  };
+
   reactionButtons.forEach((btn) => {
     btn.addEventListener("click", () => {
       if (reactionCooldown) {
@@ -54,31 +64,28 @@ document.addEventListener("DOMContentLoaded", () => {
         return;
       }
 
-      const value = Number(btn.dataset.reaction || 0);
-      socket.emit("reaction", { value });
+      const key = btn.dataset.reaction;
+      const value = reactionValueMap[key] ?? 0;
+      socket.emit("pulse:update", { value });
       startReactionCooldown();
       setReactionStatus("Reaction recorded. Thanks!");
     });
   });
-
-  /* ------------------ New question / thought ------------------ */
 
   const questionInput = document.getElementById("question-input");
   const questionForm = document.getElementById("question-form");
   const discussionList = document.getElementById("audience-discussion-list");
 
   if (questionForm) {
-    questionForm.addEventListener("submit", (e) => {
-      e.preventDefault();
+    questionForm.addEventListener("submit", (event) => {
+      event.preventDefault();
       if (!questionInput) return;
       const text = questionInput.value.trim();
       if (!text) return;
-      socket.emit("submitQuestion", { text });
+      socket.emit("question:new", { text });
       questionInput.value = "";
     });
   }
-
-  /* ------------------ Render live discussion ------------------ */
 
   function renderDiscussion(posts) {
     if (!discussionList) return;
@@ -94,11 +101,10 @@ document.addEventListener("DOMContentLoaded", () => {
       return;
     }
 
-    // Sort: unanswered first, then by net score, then newest
     const sorted = [...posts].sort((a, b) => {
-      const aAnswered = !!a.answered;
-      const bAnswered = !!b.answered;
-      if (aAnswered !== bAnswered) return aAnswered ? 1 : -1;
+      const answeredA = !!a.answered;
+      const answeredB = !!b.answered;
+      if (answeredA !== answeredB) return answeredA ? 1 : -1;
 
       const scoreA = (a.likes || 0) - (a.dislikes || 0);
       const scoreB = (b.likes || 0) - (b.dislikes || 0);
@@ -125,7 +131,7 @@ document.addEventListener("DOMContentLoaded", () => {
 
       const d = new Date(post.createdAt || Date.now());
       const infoSpan = document.createElement("span");
-      infoSpan.textContent = `👍 ${likes} · 👎 ${dislikes} · ${d.toLocaleTimeString(
+      infoSpan.textContent = `${likes} 👍 / ${dislikes} 👎 · ${d.toLocaleTimeString(
         [],
         { hour: "numeric", minute: "2-digit" }
       )}`;
@@ -135,7 +141,7 @@ document.addEventListener("DOMContentLoaded", () => {
       const upBtn = document.createElement("button");
       upBtn.className = "aud-vote-btn";
       upBtn.type = "button";
-      upBtn.textContent = "👍";
+      upBtn.textContent = "dY`?";
       upBtn.addEventListener("click", () => {
         socket.emit("voteQuestion", { id: post.id, delta: 1 });
       });
@@ -143,7 +149,7 @@ document.addEventListener("DOMContentLoaded", () => {
       const downBtn = document.createElement("button");
       downBtn.className = "aud-vote-btn";
       downBtn.type = "button";
-      downBtn.textContent = "👎";
+      downBtn.textContent = "dY`Z";
       downBtn.addEventListener("click", () => {
         socket.emit("voteQuestion", { id: post.id, delta: -1 });
       });
@@ -157,23 +163,22 @@ document.addEventListener("DOMContentLoaded", () => {
       item.appendChild(textDiv);
       item.appendChild(metaDiv);
 
-      // --- Replies section ---
       const repliesWrapper = document.createElement("div");
       repliesWrapper.className = "aud-replies";
 
       if (Array.isArray(post.replies) && post.replies.length) {
-        post.replies.forEach((r) => {
-          const rDiv = document.createElement("div");
-          rDiv.className = "aud-reply";
+        post.replies.forEach((reply) => {
+          const replyDiv = document.createElement("div");
+          replyDiv.className = "aud-reply";
 
-          const rd = new Date(r.createdAt || Date.now());
+          const rd = new Date(reply.createdAt || Date.now());
           const time = rd.toLocaleTimeString([], {
             hour: "numeric",
             minute: "2-digit",
           });
 
-          rDiv.textContent = `${r.text} · ${time}`;
-          repliesWrapper.appendChild(rDiv);
+          replyDiv.textContent = `${reply.text} · ${time}`;
+          repliesWrapper.appendChild(replyDiv);
         });
       }
 
@@ -181,7 +186,7 @@ document.addEventListener("DOMContentLoaded", () => {
       replyForm.className = "reply-form";
       const replyInput = document.createElement("input");
       replyInput.type = "text";
-      replyInput.placeholder = "Reply…";
+      replyInput.placeholder = "Reply�?�";
       const replyButton = document.createElement("button");
       replyButton.type = "submit";
       replyButton.textContent = "Reply";
@@ -189,8 +194,8 @@ document.addEventListener("DOMContentLoaded", () => {
       replyForm.appendChild(replyInput);
       replyForm.appendChild(replyButton);
 
-      replyForm.addEventListener("submit", (e) => {
-        e.preventDefault();
+      replyForm.addEventListener("submit", (event) => {
+        event.preventDefault();
         const text = replyInput.value.trim();
         if (!text) return;
         socket.emit("addReply", { parentId: post.id, text });
@@ -225,6 +230,290 @@ document.addEventListener("DOMContentLoaded", () => {
       true
     );
   });
+}
+
+document.addEventListener("DOMContentLoaded", () => {
+  const sessionCodeInput = document.getElementById("sessionCodeInput");
+  const joinButton = document.getElementById("joinSessionButton");
+  const sessionStatus = document.getElementById("sessionStatus");
+  const sessionJoinSection = document.querySelector(".session-join");
+  const audienceControls = document.getElementById("audienceControls");
+  const discussionInput = document.getElementById("audience-discussion-input");
+  const discussionPost = document.getElementById("audience-discussion-post");
+  const discussionFeed = document.getElementById("audience-discussion-feed");
+  const discussionPosts = new Map();
+
+  const appendDiscussionMessage = (container, msg) => {
+    if (!container) return;
+    if (msg?.id) {
+      if (container.querySelector(`.discussion-message[data-post-id="${msg.id}"]`)) {
+        return;
+      }
+    }
+
+    const scoreValue = typeof msg.score === "number" ? msg.score : 0;
+    const role = msg.authorType === "host" ? "FACILITATOR" : "PARTICIPANT";
+
+    const time = msg.timestamp
+      ? new Date(msg.timestamp).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })
+      : "";
+
+    const card = document.createElement("article");
+    card.className = "discussion-message";
+    if (msg.id) {
+      card.dataset.postId = msg.id;
+    }
+
+    const textEl = document.createElement("div");
+    textEl.className = "discussion-text";
+    textEl.textContent = msg.text;
+
+    const footer = document.createElement("div");
+    footer.className = "discussion-footer";
+
+    const meta = document.createElement("div");
+    meta.className = "discussion-meta";
+    meta.textContent = time ? `${role} • ${time}` : role;
+
+    const controls = document.createElement("div");
+    controls.className = "discussion-controls";
+
+    const flame = document.createElement("span");
+    flame.className = "discussion-flame";
+    flame.textContent = "🔥";
+
+    const scoreEl = document.createElement("span");
+    scoreEl.className = "discussion-score";
+    scoreEl.textContent = String(scoreValue);
+
+    const up = document.createElement("button");
+    up.className = "vote-button vote-up";
+    up.type = "button";
+    up.textContent = "👍";
+
+    const down = document.createElement("button");
+    down.className = "vote-button vote-down";
+    down.type = "button";
+    down.textContent = "👎";
+
+    const replyBtn = document.createElement("button");
+    replyBtn.className = "reply-button";
+    replyBtn.type = "button";
+    replyBtn.textContent = "Reply";
+
+    controls.appendChild(flame);
+    controls.appendChild(scoreEl);
+    controls.appendChild(up);
+    controls.appendChild(down);
+    controls.appendChild(replyBtn);
+
+    footer.appendChild(meta);
+    footer.appendChild(controls);
+
+    const repliesWrapper = document.createElement("div");
+    repliesWrapper.className = "discussion-replies";
+
+    card.appendChild(textEl);
+    card.appendChild(footer);
+    card.appendChild(repliesWrapper);
+    container.appendChild(card);
+    container.scrollTop = container.scrollHeight;
+
+    card.dataset.voteState = "0";
+
+    const sendVote = (direction) => {
+      if (!currentSessionCode || !msg.id) return;
+      socket?.emit("discussion:vote", {
+        sessionCode: currentSessionCode,
+        postId: msg.id,
+        direction,
+      });
+    };
+
+    up.addEventListener("click", () => {
+      const currentState = parseInt(card.dataset.voteState || "0", 10);
+      let next = 1;
+      if (currentState === 1) {
+        next = 0;
+      }
+      card.dataset.voteState = String(next);
+      sendVote(next);
+    });
+
+    down.addEventListener("click", () => {
+      const currentState = parseInt(card.dataset.voteState || "0", 10);
+      let next = -1;
+      if (currentState === -1) {
+        next = 0;
+      }
+      card.dataset.voteState = String(next);
+      sendVote(next);
+    });
+
+    replyBtn.addEventListener("click", () => {
+      const text = prompt("Reply to this comment:");
+      if (!text) return;
+      if (typeof createReply === "function" && msg.id) {
+        createReply(msg.id, text);
+      }
+      const replyEl = document.createElement("div");
+      replyEl.className = "discussion-reply";
+      replyEl.textContent = text;
+      repliesWrapper.appendChild(replyEl);
+    });
+  };
+
+  let socket;
+  let interactionsInitialized = false;
+  let currentSessionCode = null;
+
+  const setSessionStatus = (message, isError = false) => {
+    if (!sessionStatus) return;
+    sessionStatus.textContent = message || "";
+    sessionStatus.classList.toggle("error", !!isError);
+  };
+
+  const enableJoinUI = (enabled) => {
+    if (joinButton) joinButton.disabled = !enabled;
+    if (sessionCodeInput) sessionCodeInput.disabled = !enabled;
+  };
+
+  const handleSessionJoined = ({ code }) => {
+    currentSessionCode = code;
+    setSessionStatus(`Joined session ${code}`);
+    if (sessionJoinSection) sessionJoinSection.style.display = "none";
+    if (audienceControls) audienceControls.style.display = "";
+    if (socket && !interactionsInitialized) {
+      setupInteractionHandlers(socket);
+      interactionsInitialized = true;
+    }
+  };
+
+  const handleSessionError = (payload) => {
+    setSessionStatus(payload?.message || "Unable to join that session.", true);
+    enableJoinUI(true);
+  };
+
+  const attachSocket = async (sessionCode) => {
+    await loadSocketIoClient();
+    socket = window.io();
+
+    socket.on("connect", () => {
+      socket.emit("registerRole", "audience");
+      socket.emit("audience:joinSession", { code: sessionCode });
+    });
+
+    socket.on("audience:sessionJoined", handleSessionJoined);
+    socket.on("audience:sessionNotFound", () => {
+      handleSessionError({ message: "Session not found" });
+    });
+    socket.on("session:ended", () => {
+      setSessionStatus("Session ended by the host.", true);
+      if (audienceControls) audienceControls.style.display = "none";
+      if (sessionJoinSection) sessionJoinSection.style.display = "";
+      enableJoinUI(true);
+    });
+
+    socket.on("discussion:initialState", (history) => {
+      discussionPosts.clear();
+      if (discussionFeed) {
+        discussionFeed.innerHTML = "";
+      }
+
+      if (!Array.isArray(history)) return;
+
+      history.forEach((msg) => {
+        if (!msg?.id) return;
+        discussionPosts.set(msg.id, msg);
+        appendDiscussionMessage(discussionFeed, msg);
+      });
+    });
+
+    socket.on("discussion:messageAdded", (msg) => {
+      if (!msg?.id) return;
+      discussionPosts.set(msg.id, msg);
+      appendDiscussionMessage(discussionFeed, msg);
+    });
+
+    function applyHeatClass(card, score) {
+      if (!card) return;
+      const heatClasses = [
+        "heat-up-1",
+        "heat-up-2",
+        "heat-up-3",
+        "heat-down-1",
+        "heat-down-2",
+        "heat-down-3",
+      ];
+      card.classList.remove(...heatClasses);
+
+      const absScore = Math.abs(score || 0);
+      if (score > 0) {
+        if (absScore >= 5) {
+          card.classList.add("heat-up-3");
+        } else if (absScore >= 3) {
+          card.classList.add("heat-up-2");
+        } else if (absScore >= 1) {
+          card.classList.add("heat-up-1");
+        }
+      } else if (score < 0) {
+        if (absScore >= 5) {
+          card.classList.add("heat-down-3");
+        } else if (absScore >= 3) {
+          card.classList.add("heat-down-2");
+        } else if (absScore >= 1) {
+          card.classList.add("heat-down-1");
+        }
+      }
+    }
+
+    socket.on("discussion:scoreUpdated", ({ id, score }) => {
+      const post = discussionPosts.get(id);
+      if (post) {
+        post.score = score;
+      }
+
+      const card = document.querySelector(`.discussion-message[data-post-id="${id}"]`);
+      if (!card) return;
+
+      const scoreEl = card.querySelector(".discussion-score");
+      if (scoreEl) {
+        scoreEl.textContent = String(score);
+      }
+
+      applyHeatClass(card, score);
+    });
+  };
+
+  joinButton?.addEventListener("click", async () => {
+    const sessionCode = sessionCodeInput?.value.trim();
+    if (!sessionCode) {
+      setSessionStatus("Enter a session code to join.", true);
+      return;
+    }
+
+    setSessionStatus("Joining session...");
+    enableJoinUI(false);
+
+    try {
+      await attachSocket(sessionCode);
+    } catch (error) {
+      setSessionStatus(error.message, true);
+      enableJoinUI(true);
+    }
+  });
+
+  discussionPost?.addEventListener("click", () => {
+    if (!discussionInput) return;
+    const text = (discussionInput.value || "").trim();
+    if (!text || !currentSessionCode) return;
+
+    socket?.emit("discussion:newMessage", {
+      sessionCode: currentSessionCode,
+      text,
+      authorType: "audience",
+    });
+
+    discussionInput.value = "";
+  });
 });
-
-

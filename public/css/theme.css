@@ -111,3 +111,129 @@ button {
   color: var(--text-muted);
 }
 
+.discussion-feed {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+  margin-top: 0.75rem;
+}
+.discussion-message {
+  background: rgba(10, 14, 25, 0.95);
+  border-radius: 8px;
+  border: 1px solid rgba(255, 255, 255, 0.06);
+  padding: 0.5rem 0.75rem;
+  margin-top: 0.5rem;
+  display: flex;
+  flex-direction: column;
+}
+
+.discussion-text {
+  font-size: 0.9rem;
+  color: rgba(255, 255, 255, 0.95);
+  margin-bottom: 0.35rem;
+}
+
+.discussion-footer {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  font-size: 0.75rem;
+}
+
+.discussion-meta {
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  color: rgba(255, 255, 255, 0.55);
+}
+
+.discussion-controls {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+  color: rgba(255, 255, 255, 0.75);
+}
+
+.discussion-flame {
+  font-size: 0.9rem;
+}
+
+.discussion-score {
+  min-width: 1.5rem;
+  text-align: center;
+  font-weight: 600;
+}
+
+.discussion-replies {
+  margin-top: 0.35rem;
+  padding-left: 0.75rem;
+  border-left: 2px solid rgba(255, 255, 255, 0.08);
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+}
+
+.discussion-reply {
+  font-size: 0.78rem;
+  color: rgba(226, 232, 240, 0.8);
+}
+
+.vote-button {
+  border: none;
+  background: transparent;
+  color: rgba(255, 255, 255, 0.75);
+  cursor: pointer;
+  font-size: 0.9rem;
+  padding: 0;
+}
+
+.vote-button:hover {
+  color: rgba(255, 255, 255, 1);
+}
+
+.heat-up-1 {
+  border-color: rgba(251, 146, 60, 0.5);
+  box-shadow: 0 0 15px rgba(251, 146, 60, 0.3);
+}
+
+.heat-up-2 {
+  border-color: rgba(251, 146, 60, 0.6);
+  box-shadow: 0 0 20px rgba(251, 146, 60, 0.35);
+}
+
+.heat-up-3 {
+  border-color: rgba(245, 158, 11, 0.8);
+  box-shadow: 0 0 28px rgba(245, 158, 11, 0.4);
+}
+
+.heat-down-1 {
+  border-color: rgba(59, 130, 246, 0.5);
+  box-shadow: 0 0 15px rgba(59, 130, 246, 0.3);
+}
+
+.heat-down-2 {
+  border-color: rgba(59, 130, 246, 0.6);
+  box-shadow: 0 0 20px rgba(59, 130, 246, 0.35);
+}
+
+.heat-down-3 {
+  border-color: rgba(37, 99, 235, 0.8);
+  box-shadow: 0 0 28px rgba(37, 99, 235, 0.4);
+}
+
+.reply-button {
+  border: none;
+  background: #f97316;
+  color: #0b1120;
+  padding: 0.18rem 0.6rem;
+  border-radius: 999px;
+  font-size: 0.7rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  cursor: pointer;
+  transition: background 0.2s ease;
+}
+
+.reply-button:hover {
+  background: #fb923c;
+}
+

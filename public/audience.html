@@ -1,51 +1,64 @@
 <!DOCTYPE html>
 <html lang="en">
+
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>AmplifyEd – Audience</title>
-
-  <!-- Socket.IO -->
-  <script src="/socket.io/socket.io.js"></script>
-
-  <!-- Theme + Audience Styles -->
+  <title>AmplifyEd Pulse | Audience</title>
   <link rel="stylesheet" href="css/theme.css" />
   <link rel="stylesheet" href="css/audience.css" />
 </head>
 
 <body>
   <main class="aud-shell">
-    <h1 class="aud-title">How’s this landing?</h1>
-    <p class="aud-subtitle">Tap an emoji or share a quick thought.</p>
+    <header class="aud-header">
+      <p class="aud-tag">AmplifyEd Pulse</p>
+      <h1 class="aud-title">Stay in sync with the session</h1>
+    </header>
 
-    <section class="aud-reactions">
-      <button class="reaction-btn" data-reaction="1">🙂 This hits</button>
-      <button class="reaction-btn" data-reaction="0">😐 Meh</button>
-      <button class="reaction-btn" data-reaction="-1">🙁 Not landing</button>
-    </section>
-    <div id="reaction-status" class="reaction-status" role="status" aria-live="polite"></div>
-
-    <section class="aud-compose">
-      <h2>Share a thought or question</h2>
-      <form id="question-form">
-        <textarea
-          id="question-input"
-          placeholder="Type a quick comment or question..."
-        ></textarea>
-        <button type="submit">Post</button>
-      </form>
-      <div id="reply-status" class="reaction-status" role="status" aria-live="polite"></div>
+    <section class="session-join">
+      <label for="sessionCodeInput">Session Code</label>
+      <div class="session-join-row">
+        <input id="sessionCodeInput" name="sessionCode" type="text" placeholder="Enter code" />
+        <button id="joinSessionButton" type="button">Join Session</button>
+      </div>
+      <div id="sessionStatus" class="reaction-status" role="status" aria-live="polite"></div>
     </section>
 
-    <section class="aud-discussion">
-      <h2>Live discussion</h2>
-      <div id="audience-discussion-list"></div>
-    </section>
+    <div id="audienceControls" class="aud-controls audience-panel" style="display:none">
+      <div class="pulse-buttons" aria-label="How’s this landing?">
+        <button class="pulse-button pulse-positive" data-reaction="positive" type="button">
+          <span class="pulse-icon" aria-hidden="true">🔥</span>
+          <span class="pulse-label">This hits</span>
+        </button>
+        <button class="pulse-button pulse-neutral" data-reaction="neutral" type="button">
+          <span class="pulse-icon" aria-hidden="true">😐</span>
+          <span class="pulse-label">Meh</span>
+        </button>
+        <button class="pulse-button pulse-negative" data-reaction="negative" type="button">
+          <span class="pulse-icon" aria-hidden="true">💨</span>
+          <span class="pulse-label">Not landing</span>
+        </button>
+      </div>
+      <div id="reaction-status" class="reaction-status" role="status" aria-live="polite"></div>
+      <section class="audience-discussion">
+        <h2>Share a thought or question</h2>
+        <div class="discussion-input-row">
+          <textarea
+            id="audience-discussion-input"
+            placeholder="Type a quick comment or question..."
+            rows="3"
+          ></textarea>
+          <button id="audience-discussion-post" type="button">Post</button>
+        </div>
+
+        <h3>Live discussion</h3>
+        <div id="audience-discussion-feed" class="discussion-feed"></div>
+      </section>
+    </div>
   </main>
 
-  <script src="/socket.io/socket.io.js"></script>
-  <script src="script-audience.js"></script>
+  <script src="/script-audience.js" type="module"></script>
 </body>
 
 </html>
-

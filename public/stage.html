@@ -1,34 +1,34 @@
 <!DOCTYPE html>
 <html lang="en">
+
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>AmplifyEd – Stage View</title>
-
-  <!-- Global theme + stage-specific styles -->
- <link rel="stylesheet" href="css/theme.css" />
-<link rel="stylesheet" href="css/stage.css" />
-
-
-  <!-- Chart.js for pulse -->
+  <title>AmplifyEd Pulse | Stage View</title>
+  <link rel="stylesheet" href="css/theme.css" />
+  <link rel="stylesheet" href="css/stage.css" />
   <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
-  <!-- Socket.IO client -->
-  <script src="/socket.io/socket.io.js"></script>
 </head>
+
 <body>
   <div class="stage-shell">
-    <!-- Header -->
     <header class="stage-header">
-      <div class="stage-title">AmplifyEd – Stage View</div>
+      <div class="stage-title">AmplifyEd Pulse | Stage View</div>
       <div class="status-pill">
         <span class="status-dot"></span>
         <span id="stage-participant-count">0 participants</span>
       </div>
     </header>
 
-    <!-- Main layout: VIDEO / DISCUSSION -->
+    <section class="session-banner">
+      <div>
+        <p class="panel-label">Session Code</p>
+        <h2 id="session-code-display" class="session-code">Generating...</h2>
+      </div>
+      <p class="session-hint">Share this code with the audience so they can join the session.</p>
+    </section>
+
     <div class="stage-main">
-      <!-- VIDEO PANEL -->
       <section class="stage-panel">
         <div class="stage-header">
           <h2>Video</h2>
@@ -38,15 +38,12 @@
           </div>
         </div>
 
-        <!-- Inner video/slide container -->
         <div id="stage-video-inner" class="camera-mode">
-          <!-- Camera View -->
           <div class="camera-view">
             <video id="stage-camera" autoplay playsinline muted></video>
             <div id="camera-status" class="camera-status">Unable to access camera.</div>
           </div>
 
-          <!-- Slides View -->
           <div class="slides-view">
             <div class="slides-controls">
               <span id="slides-indicator">No deck connected</span>
@@ -64,26 +61,23 @@
               </div>
             </div>
           </div>
-
         </div>
 
         <div class="stage-focus">
           <div class="focus-title">Stage focus</div>
           <p id="stage-focus-text" class="focus-text">
-            No focus set yet. Update the focus text from Backstage to announce what
-            the audience should pay attention to.
+            No focus set yet. Update the focus text from Backstage to announce what the audience should pay attention to.
           </p>
         </div>
       </section>
 
-      <!-- LIVE DISCUSSION PANEL -->
       <section class="stage-discussion-panel">
         <div class="panel-label">Live discussion</div>
+        <div id="stage-discussion-feed" class="discussion-feed"></div>
         <div id="stage-discussion-list" class="discussion-list"></div>
       </section>
     </div>
 
-    <!-- PULSE STRIP -->
     <section class="stage-pulse">
       <div class="pulse-heading">
         <span>Live engagement pulse</span>
@@ -98,18 +92,15 @@
           </span>
         </div>
         <div class="control-right">
-          <span><span class="legend-dot" style="background:#22d3ee"></span> Positive</span>
-          ·
-          <span><span class="legend-dot" style="background:#9ca3af"></span> Neutral</span>
-          ·
-          <span><span class="legend-dot" style="background:#ef4444"></span> Negative</span>
+          <span><span class="legend-dot positive"></span> Positive</span>
+          <span><span class="legend-dot neutral"></span> Neutral</span>
+          <span><span class="legend-dot negative"></span> Negative</span>
         </div>
       </div>
     </section>
   </div>
 
-  <!-- Stage logic (video + pulse + discussion) -->
-  <script src="stage.js"></script>
+  <script src="/stage.js" type="module"></script>
 </body>
-</html>
 
+</html>
