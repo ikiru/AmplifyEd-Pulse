@@ -12,7 +12,57 @@ const trainerRoutes = require("./src/routes/trainer.routes");
 const app = express();
 const server = http.createServer(app);
 const io = new Server(server);
+
+// === Session code helpers (host + stage) ===
+// PATCH START: session helpers
+const SESSION_CODE_ALPHABET = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789";
+const SESSION_CODE_LENGTH = 6;
+
+// Maps sessionCode -> { code, createdAt, stageSocketId }
+const activeSessions = new Map();
 const sessions = new Map();
+
+function generateSessionCode() {
+  let result = "";
+  for (let i = 0; i < SESSION_CODE_LENGTH; i++) {
+    const idx = Math.floor(Math.random() * SESSION_CODE_ALPHABET.length);
+    result += SESSION_CODE_ALPHABET[idx];
+  }
+  return result;
+}
+
+function createSessionForSocket(socket) {
+  const code = generateSessionCode();
+
+  const session = {
+    code,
+    createdAt: Date.now(),
+    stageSocketId: socket.id,
+  };
+
+  activeSessions.set(code, session);
+  sessions.set(code, {
+    hostSocketId: socket.id,
+    participants: new Set(),
+  });
+
+  socket.join(code);
+
+  console.log("[Server] Created session", code, "for stage socket", socket.id);
+
+  // Tell the stage its code
+  socket.emit("stage:sessionInfo", { code });
+  broadcastParticipantCount(code);
+
+  return session;
+}
+function broadcastParticipantCount(code) {
+  if (!code) return;
+  const room = io.sockets.adapter.rooms.get(code);
+  const count = room ? Math.max(0, room.size - 1) : 0;
+  io.to(code).emit("participantCount", { count });
+}
+// PATCH END: session helpers
 
 registerPulseModule(io, sessions);
 registerLiveDiscussion(io, sessions);
@@ -107,7 +157,7 @@ let stageFocusText = "";
 // ----------- Socket.IO -----------
 
 io.on("connection", (socket) => {
-  console.log("Client connected:", socket.id);
+  console.log("[Server] New socket connected:", socket.id);
 
   // Role (not strictly required, but helpful: 'audience', 'stage', 'backstage')
   let role = "audience";
@@ -118,6 +168,39 @@ io.on("connection", (socket) => {
     } else {
       role = "audience";
     }
+  });
+
+  socket.on("host:createSession", () => {
+    console.log("[Server] host:createSession from", socket.id);
+    createSessionForSocket(socket);
+  });
+
+  // Handle stage session request
+  socket.on("stage:requestSession", () => {
+    console.log("[Server] Stage requested a session from", socket.id);
+    createSessionForSocket(socket);
+  });
+
+  // --- Audience joins an existing session by code ----
+  socket.on("audience:joinSession", ({ code }) => {
+    const trimmed = (code || "").toUpperCase().trim();
+    console.log("[Server] audience:joinSession", trimmed, "from", socket.id);
+
+    const session = activeSessions.get(trimmed);
+    if (!session) {
+      console.log("[Server] audience:sessionNotFound", trimmed, "from", socket.id);
+      socket.emit("audience:sessionNotFound", { code: trimmed });
+      return;
+    }
+
+    socket.join(trimmed);
+    console.log("[Server] audience:sessionJoined", trimmed, "from", socket.id);
+    socket.emit("audience:sessionJoined", { code: trimmed });
+    io.to(session.stageSocketId).emit("session:participantJoined", {
+      code: trimmed,
+      audienceSocketId: socket.id,
+    });
+    broadcastParticipantCount(trimmed);
   });
 
   // NEW: send current slide embed config
@@ -152,3 +235,5 @@ const PORT = process.env.PORT || 3000;
 server.listen(PORT, () => {
   console.log(`AmplifyEd Pulse running at http://localhost:${PORT}`);
 });
+
+

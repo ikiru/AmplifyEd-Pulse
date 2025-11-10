@@ -37,9 +37,28 @@ function getReactionCount(sessionId) {
   return sessionReactions.size;
 }
 
+function getReactionBreakdown(sessionId) {
+  const sessionReactions = sessionId ? sessions.get(sessionId) : null;
+  if (!sessionReactions || sessionReactions.size === 0) {
+    return { positive: 0, neutral: 0, negative: 0 };
+  }
+  const breakdown = { positive: 0, neutral: 0, negative: 0 };
+  for (const value of sessionReactions.values()) {
+    if (value > 0) {
+      breakdown.positive += 1;
+    } else if (value < 0) {
+      breakdown.negative += 1;
+    } else {
+      breakdown.neutral += 1;
+    }
+  }
+  return breakdown;
+}
+
 module.exports = {
   updateReaction,
   removeReaction,
   computePulse,
   getReactionCount,
+  getReactionBreakdown,
 };

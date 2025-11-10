@@ -20,17 +20,16 @@
       </div>
     </header>
 
-    <section class="session-banner">
-      <div>
-        <p class="panel-label">Session Code</p>
-        <h2 id="session-code-display" class="session-code">Generating...</h2>
-      </div>
-      <p class="session-hint">Share this code with the audience so they can join the session.</p>
+    <section class="stage-focus-card">
+      <div class="focus-title">Stage focus</div>
+      <p id="stage-focus-text" class="focus-text">
+        No focus set yet. Update the focus text from Backstage to announce what the audience should pay attention to.
+      </p>
     </section>
 
-    <div class="stage-main">
-      <section class="stage-panel">
-        <div class="stage-header">
+    <div class="stage-grid">
+      <section class="stage-media">
+        <div class="stage-media-header">
           <h2>Video</h2>
           <div class="view-toggle">
             <button id="btn-show-camera" class="toggle-btn active">Camera</button>
@@ -62,44 +61,47 @@
             </div>
           </div>
         </div>
-
-        <div class="stage-focus">
-          <div class="focus-title">Stage focus</div>
-          <p id="stage-focus-text" class="focus-text">
-            No focus set yet. Update the focus text from Backstage to announce what the audience should pay attention to.
-          </p>
-        </div>
       </section>
 
-      <section class="stage-discussion-panel">
-        <div class="panel-label">Live discussion</div>
-        <div id="stage-discussion-feed" class="discussion-feed"></div>
-        <div id="stage-discussion-list" class="discussion-list"></div>
-      </section>
+      <div class="stage-side">
+        <section class="stage-pulse-card">
+          <div class="pulse-heading">
+            <span>Live pulse</span>
+          </div>
+          <div class="pulse-chart-wrapper">
+            <div class="live-pulse-graph">
+              <canvas id="livePulseChart"></canvas>
+            </div>
+            <canvas id="stage-pulse-chart"></canvas>
+          </div>
+          <div class="control-bar">
+            <div class="control-left">
+              <div id="roomMood" class="room-mood">Room’s in think mode.</div>
+            </div>
+          </div>
+        </section>
+
+        <section class="session-card">
+          <div class="session-card-header">
+            <div>
+              <div class="session-label">SESSION CODE</div>
+              <div id="session-code-value" class="session-code">Generating...</div>
+            </div>
+            <div class="session-label">Scan to join</div>
+          </div>
+          <div id="session-qr" class="session-qr"></div>
+        </section>
+      </div>
     </div>
 
-    <section class="stage-pulse">
-      <div class="pulse-heading">
-        <span>Live engagement pulse</span>
-      </div>
-      <div class="pulse-chart-wrapper">
-        <canvas id="stage-pulse-chart"></canvas>
-      </div>
-      <div class="control-bar">
-        <div class="control-left">
-          <span id="stage-pulse-value" class="pulse-value">
-            Current pulse: 0.00
-          </span>
-        </div>
-        <div class="control-right">
-          <span><span class="legend-dot positive"></span> Positive</span>
-          <span><span class="legend-dot neutral"></span> Neutral</span>
-          <span><span class="legend-dot negative"></span> Negative</span>
-        </div>
-      </div>
+    <section class="stage-discussion-panel">
+      <div class="panel-label">Live discussion</div>
+      <div id="stage-discussion-feed" class="discussion-feed"></div>
+      <div id="stage-discussion-list" class="discussion-list"></div>
     </section>
   </div>
 
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
   <script src="/stage.js" type="module"></script>
 </body>
 

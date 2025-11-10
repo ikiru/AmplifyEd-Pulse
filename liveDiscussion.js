@@ -1,10 +1,45 @@
 const discussionBySession = new Map();
+const participantsBySession = new Map();
+const nextParticipantNumberBySession = new Map();
+const socketSessionMap = new Map();
+
+function getOrCreateParticipants(code) {
+  if (!participantsBySession.has(code)) {
+    participantsBySession.set(code, new Map());
+    nextParticipantNumberBySession.set(code, 1);
+  }
+  return participantsBySession.get(code);
+}
+
+function assignParticipantName(code, socketId) {
+  const participants = getOrCreateParticipants(code);
+  if (participants.has(socketId)) {
+    return participants.get(socketId);
+  }
+  const nextNumber = nextParticipantNumberBySession.get(code) || 1;
+  const name = `Participant ${nextNumber}`;
+  participants.set(socketId, name);
+  nextParticipantNumberBySession.set(code, nextNumber + 1);
+  return name;
+}
+
+function removeParticipant(code, socketId) {
+  const participants = participantsBySession.get(code);
+  if (participants) {
+    participants.delete(socketId);
+  }
+}
 
 function getOrCreateSessionPosts(code) {
   if (!discussionBySession.has(code)) {
     discussionBySession.set(code, new Map());
   }
   return discussionBySession.get(code);
+}
+
+function getParticipantName(code, socketId) {
+  const participants = participantsBySession.get(code);
+  return participants ? participants.get(socketId) : undefined;
 }
 
 function serializePost(post) {
@@ -16,6 +51,7 @@ function serializePost(post) {
     authorType: post.authorType,
     timestamp: post.timestamp,
     score: post.score,
+    authorName: post.authorName,
   };
 }
 
@@ -25,21 +61,20 @@ function registerLiveDiscussion(io, sessions) {
       const code = (msg.sessionCode || "").trim().toUpperCase();
       if (!sessions.has(code)) return;
 
-      const parentId = msg.parentId || null;
-      const authorType = msg.authorType === "host" ? "host" : "audience";
-      const text = (msg.text || "").trim();
-      if (!text) return;
-
       const posts = getOrCreateSessionPosts(code);
-      const id = Date.now().toString() + "-" + Math.random().toString(36).slice(2);
-      const timestamp = new Date().toISOString();
+      const participants = getOrCreateParticipants(code);
+      const authorName = participants.get(socket.id) || assignParticipantName(code, socket.id);
+
+      const id = msg.id || Date.now().toString() + "-" + Math.random().toString(36).slice(2);
+      const timestamp = msg.timestamp || new Date().toISOString();
 
       const post = {
         id,
         sessionCode: code,
-        parentId,
-        text,
-        authorType,
+        parentId: msg.parentId || null,
+        text: msg.text,
+        authorType: msg.authorType === "host" ? "host" : "audience",
+        authorName,
         timestamp,
         score: 0,
         votes: new Map(),
@@ -47,7 +82,17 @@ function registerLiveDiscussion(io, sessions) {
 
       posts.set(id, post);
 
-      const wirePost = serializePost(post);
+      const wirePost = {
+        id: post.id,
+        sessionCode: post.sessionCode,
+        parentId: post.parentId,
+        text: post.text,
+        authorType: post.authorType,
+        authorName: post.authorName,
+        timestamp: post.timestamp,
+        score: post.score,
+      };
+
       io.to(code).emit("discussion:messageAdded", wirePost);
     });
 
@@ -55,6 +100,10 @@ function registerLiveDiscussion(io, sessions) {
       if (!code || typeof code !== "string") return;
       const normalized = code.trim().toUpperCase();
       if (!sessions.has(normalized)) return;
+
+      socketSessionMap.set(socket.id, normalized);
+      const identity = assignParticipantName(normalized, socket.id);
+      socket.emit("discussion:identity", { authorName: identity });
 
       const posts = getOrCreateSessionPosts(normalized);
       const history = Array.from(posts.values())
@@ -93,6 +142,14 @@ function registerLiveDiscussion(io, sessions) {
         id: wirePost.id,
         score: wirePost.score,
       });
+    });
+
+    socket.on("disconnect", () => {
+      const code = socketSessionMap.get(socket.id);
+      if (code) {
+        removeParticipant(code, socket.id);
+        socketSessionMap.delete(socket.id);
+      }
     });
   });
 }

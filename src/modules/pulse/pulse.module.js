@@ -3,6 +3,7 @@ const {
   removeReaction,
   computePulse,
   getReactionCount,
+  getReactionBreakdown,
 } = require("../../core/pulseEngine");
 
 const REACTION_THROTTLE_MS = 1200;
@@ -24,6 +25,8 @@ function emitPulseState(io, sessionId) {
   const currentPulse = computePulse(sessionId);
   io.to(sessionId).emit("pulseData", { currentPulse });
   io.to(sessionId).emit("participantCount", { count: getReactionCount(sessionId) });
+  const breakdown = getReactionBreakdown(sessionId);
+  io.to(sessionId).emit("pulseBreakdown", breakdown);
 }
 
 function registerPulseModule(io, sessions) {

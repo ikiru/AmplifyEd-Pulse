@@ -127,6 +127,10 @@ button {
   flex-direction: column;
 }
 
+.discussion-reply-card {
+  margin-left: 0.25rem;
+}
+
 .discussion-text {
   font-size: 0.9rem;
   color: rgba(255, 255, 255, 0.95);

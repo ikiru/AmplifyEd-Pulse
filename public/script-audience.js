@@ -243,16 +243,60 @@ document.addEventListener("DOMContentLoaded", () => {
   const discussionFeed = document.getElementById("audience-discussion-feed");
   const discussionPosts = new Map();
 
-  const appendDiscussionMessage = (container, msg) => {
-    if (!container) return;
-    if (msg?.id) {
-      if (container.querySelector(`.discussion-message[data-post-id="${msg.id}"]`)) {
-        return;
+  const applyHeatClass = (card, score) => {
+    if (!card) return;
+    const heatClasses = [
+      "heat-up-1",
+      "heat-up-2",
+      "heat-up-3",
+      "heat-down-1",
+      "heat-down-2",
+      "heat-down-3",
+    ];
+    card.classList.remove(...heatClasses);
+
+    const absScore = Math.abs(score || 0);
+    if (score > 0) {
+      if (absScore >= 5) {
+        card.classList.add("heat-up-3");
+      } else if (absScore >= 3) {
+        card.classList.add("heat-up-2");
+      } else if (absScore >= 1) {
+        card.classList.add("heat-up-1");
       }
+    } else if (score < 0) {
+      if (absScore >= 5) {
+        card.classList.add("heat-down-3");
+      } else if (absScore >= 3) {
+        card.classList.add("heat-down-2");
+      } else if (absScore >= 1) {
+        card.classList.add("heat-down-1");
+      }
+    }
+  };
+
+  const ensureRepliesContainer = (parentId) => {
+    if (!parentId) return discussionFeed;
+    const parentCard = document.querySelector(`.discussion-message[data-post-id="${parentId}"]`);
+    if (!parentCard) return discussionFeed;
+    let replies = parentCard.querySelector(".discussion-replies");
+    if (!replies) {
+      replies = document.createElement("div");
+      replies.className = "discussion-replies";
+      parentCard.appendChild(replies);
+    }
+    return replies;
+  };
+
+  const appendDiscussionMessage = (container, msg) => {
+    if (!container || !msg?.id) return;
+    if (document.querySelector(`.discussion-message[data-post-id="${msg.id}"]`)) {
+      return;
     }
 
     const scoreValue = typeof msg.score === "number" ? msg.score : 0;
-    const role = msg.authorType === "host" ? "FACILITATOR" : "PARTICIPANT";
+    const authorLabel =
+      msg.authorName || (msg.authorType === "host" ? "Facilitator" : "Participant");
 
     const time = msg.timestamp
       ? new Date(msg.timestamp).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })
@@ -273,7 +317,7 @@ document.addEventListener("DOMContentLoaded", () => {
 
     const meta = document.createElement("div");
     meta.className = "discussion-meta";
-    meta.textContent = time ? `${role} • ${time}` : role;
+    meta.textContent = time ? `${authorLabel} • ${time}` : authorLabel;
 
     const controls = document.createElement("div");
     controls.className = "discussion-controls";
@@ -316,7 +360,13 @@ document.addEventListener("DOMContentLoaded", () => {
     card.appendChild(textEl);
     card.appendChild(footer);
     card.appendChild(repliesWrapper);
-    container.appendChild(card);
+
+    const targetContainer = msg.parentId ? ensureRepliesContainer(msg.parentId) : container;
+    if (!targetContainer) return;
+    if (msg.parentId) {
+      card.classList.add("discussion-reply-card");
+    }
+    targetContainer.appendChild(card);
     container.scrollTop = container.scrollHeight;
 
     card.dataset.voteState = "0";
@@ -353,19 +403,25 @@ document.addEventListener("DOMContentLoaded", () => {
     replyBtn.addEventListener("click", () => {
       const text = prompt("Reply to this comment:");
       if (!text) return;
-      if (typeof createReply === "function" && msg.id) {
-        createReply(msg.id, text);
-      }
-      const replyEl = document.createElement("div");
-      replyEl.className = "discussion-reply";
-      replyEl.textContent = text;
-      repliesWrapper.appendChild(replyEl);
+      createReply(msg.id, text);
     });
+
+    applyHeatClass(card, msg.score);
   };
 
   let socket;
   let interactionsInitialized = false;
   let currentSessionCode = null;
+
+  const createReply = (parentId, text) => {
+    if (!currentSessionCode || !parentId || !text) return;
+    socket?.emit("discussion:newMessage", {
+      sessionCode: currentSessionCode,
+      text,
+      parentId,
+      authorType: "audience",
+    });
+  };
 
   const setSessionStatus = (message, isError = false) => {
     if (!sessionStatus) return;
@@ -434,38 +490,6 @@ document.addEventListener("DOMContentLoaded", () => {
       discussionPosts.set(msg.id, msg);
       appendDiscussionMessage(discussionFeed, msg);
     });
-
-    function applyHeatClass(card, score) {
-      if (!card) return;
-      const heatClasses = [
-        "heat-up-1",
-        "heat-up-2",
-        "heat-up-3",
-        "heat-down-1",
-        "heat-down-2",
-        "heat-down-3",
-      ];
-      card.classList.remove(...heatClasses);
-
-      const absScore = Math.abs(score || 0);
-      if (score > 0) {
-        if (absScore >= 5) {
-          card.classList.add("heat-up-3");
-        } else if (absScore >= 3) {
-          card.classList.add("heat-up-2");
-        } else if (absScore >= 1) {
-          card.classList.add("heat-up-1");
-        }
-      } else if (score < 0) {
-        if (absScore >= 5) {
-          card.classList.add("heat-down-3");
-        } else if (absScore >= 3) {
-          card.classList.add("heat-down-2");
-        } else if (absScore >= 1) {
-          card.classList.add("heat-down-1");
-        }
-      }
-    }
 
     socket.on("discussion:scoreUpdated", ({ id, score }) => {
       const post = discussionPosts.get(id);
