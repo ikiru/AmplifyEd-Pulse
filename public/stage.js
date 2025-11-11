@@ -3,6 +3,31 @@
 
 let pulseData = Array(60).fill(0); // 60 points of history
 let pulseChart = null;
+let lastPulseValue = 0;
+let lastPulseUpdateTime = Date.now();
+let breathingTimer = null;
+
+const pulseGlowPlugin = {
+  id: "pulseGlowPlugin",
+  beforeDatasetsDraw(chart, args, options) {
+    const ctx = chart.ctx;
+    const meta = chart.getDatasetMeta(0);
+    const dataset = meta.dataset;
+    if (!dataset) return;
+
+    ctx.save();
+    ctx.shadowColor = options.shadowColor || "rgba(0, 255, 153, 0.7)";
+    ctx.shadowBlur = options.shadowBlur || 18;
+    ctx.shadowOffsetX = 0;
+    ctx.shadowOffsetY = 0;
+
+    dataset.draw(ctx);
+
+    ctx.restore();
+  },
+};
+
+Chart.register(pulseGlowPlugin);
 
 function getPulseColor(value) {
   if (value > 0.3) return "#00ff99";
@@ -24,6 +49,22 @@ function loadSocketIoClient() {
     script.onerror = () => reject(new Error("Unable to load Socket.IO"));
     document.head.appendChild(script);
   });
+}
+
+function startPulseBreathing() {
+  if (breathingTimer) return;
+
+  breathingTimer = setInterval(() => {
+    const now = Date.now();
+    const msSinceUpdate = now - lastPulseUpdateTime;
+    if (msSinceUpdate < 3000 || !pulseChart) return;
+
+    const t = now / 1000;
+    const wiggle = Math.sin(t * 0.7) * 0.05;
+    const syntheticValue = lastPulseValue + wiggle;
+    const clamped = Math.max(-1, Math.min(1, syntheticValue));
+    updatePulseLine(clamped, { shadowBlur: 12 });
+  }, 500);
 }
 
 function initPulseChart() {
@@ -65,6 +106,10 @@ function initPulseChart() {
       plugins: {
         legend: { display: false },
         tooltip: { enabled: false },
+        pulseGlowPlugin: {
+          shadowColor: "rgba(163, 219, 255, 0.75)",
+          shadowBlur: 18,
+        },
       },
       elements: {
         line: {
@@ -73,7 +118,9 @@ function initPulseChart() {
         },
       },
     },
-  });
+    });
+
+  startPulseBreathing();
 }
 
 function updateSessionCodeUI(sessionCode) {
@@ -182,13 +229,33 @@ async function initStage() {
   const pulseValueEl = document.getElementById("stage-pulse-value");
   const roomMoodEl = document.getElementById("roomMood");
 
-  function updatePulseLine(value) {
+  function updatePulseLine(value, options = {}) {
     if (!pulseChart) return;
     pulseData.push(value);
     pulseData.shift();
-    pulseChart.data.datasets[0].data = [...pulseData];
-    pulseChart.data.datasets[0].borderColor = getPulseColor(value);
+    const moodColor = getPulseColor(value);
+    const dataset = pulseChart.data.datasets[0];
+    dataset.data = [...pulseData];
+    dataset.borderColor = moodColor;
+    const intensity = Math.min(1, Math.abs(value));
+    dataset.borderWidth = 2 + intensity * 1.5;
+
+    const glowOpts = pulseChart.options.plugins?.pulseGlowPlugin;
+    if (glowOpts) {
+      glowOpts.shadowColor =
+        value > 0.3
+          ? "rgba(0, 255, 153, 0.75)"
+          : value < -0.3
+          ? "rgba(255, 77, 77, 0.8)"
+          : "rgba(143, 180, 217, 0.75)";
+      if (options.shadowBlur !== undefined) {
+        glowOpts.shadowBlur = options.shadowBlur;
+      }
+    }
+
     pulseChart.update("none");
+    lastPulseValue = value;
+    lastPulseUpdateTime = Date.now();
   }
 
   function updateRoomMood(pulse) {
