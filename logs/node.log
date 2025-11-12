@@ -1,0 +1,12 @@
+AmplifyEd Pulse running at http://localhost:3000
+AmplifyEd Pulse running at http://localhost:3000
+[Server] New socket connected: sYkx8PmFuSDayHEJAAAB
+[Server] Stage requested a session from sYkx8PmFuSDayHEJAAAB
+[Server] Created session ZCWJ7J for stage socket sYkx8PmFuSDayHEJAAAB
+[Server] New socket connected: 9i7nPfsS7j19UrU3AAAD
+[Server] Stage requested a session from 9i7nPfsS7j19UrU3AAAD
+[Server] Created session SF7CYZ for stage socket 9i7nPfsS7j19UrU3AAAD
+Client disconnected: 9i7nPfsS7j19UrU3AAAD
+[Server] New socket connected: 6wEMC4zV4Kl2i8XTAAAF
+[Server] audience:joinSession ZCWJ7J from 6wEMC4zV4Kl2i8XTAAAF
+[Server] audience:sessionJoined ZCWJ7J from 6wEMC4zV4Kl2i8XTAAAF

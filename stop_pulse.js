@@ -1,105 +1,140 @@
 // stop_pulse.js
-// Cross-platform shutdown for AmplifyEd Pulse
+// Stops the Node.js server and FastAPI microservice.
 // Run with: node stop_pulse.js
 
-import { exec } from "child_process";
-import os from "os";
+const fs = require("fs");
+const os = require("os");
+const path = require("path");
+const { execSync } = require("child_process");
 
-console.log("============================================================");
-console.log("     AMPLIFYED PULSE - SHUTDOWN");
-console.log("============================================================\n");
+const projectRoot = __dirname;
+const PID_FILE = path.join(projectRoot, ".pulse_processes.json");
 
-function killByPortWindows(port, label) {
-  return new Promise((resolve) => {
-    const findCmd = `netstat -ano | findstr :${port}`;
-    exec(findCmd, (err, stdout) => {
-      if (err || !stdout.trim()) {
-        console.log(`[${label}] No process found on port ${port}.`);
-        return resolve(false);
-      }
+const sleep = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
 
-      const pids = [
-        ...new Set(
-          stdout
-            .trim()
-            .split(/\r?\n/)
-            .map((line) => line.trim().split(/\s+/).pop())
-            .filter(Boolean)
-        ),
-      ];
-
-      if (!pids.length) {
-        console.log(`[${label}] No process found on port ${port}.`);
-        return resolve(false);
-      }
-
-      const killCmd = `taskkill /F ${pids.map((pid) => `/PID ${pid}`).join(" ")}`;
-      exec(killCmd, () => {
-        resolve(true);
-      });
-    });
-  });
+function readPidFile() {
+  try {
+    if (!fs.existsSync(PID_FILE)) {
+      return {};
+    }
+    return JSON.parse(fs.readFileSync(PID_FILE, "utf8"));
+  } catch {
+    return {};
+  }
 }
 
-function killByPortUnix(port, label) {
-  return new Promise((resolve) => {
-    const findCmd = `lsof -ti :${port}`;
-    exec(findCmd, (err, stdout) => {
-      if (err || !stdout.trim()) {
-        console.log(`[${label}] No process found on port ${port}.`);
-        return resolve(false);
-      }
-
-      const pids = [
-        ...new Set(
-          stdout
-            .trim()
-            .split(/\r?\n/)
-            .map((line) => line.trim())
-            .filter(Boolean)
-        ),
-      ];
-
-      if (!pids.length) {
-        console.log(`[${label}] No process found on port ${port}.`);
-        return resolve(false);
-      }
-
-      const killCmd = `kill -9 ${pids.join(" ")}`;
-      exec(killCmd, () => {
-        resolve(true);
-      });
-    });
-  });
+function removePidFile() {
+  try {
+    if (fs.existsSync(PID_FILE)) {
+      fs.unlinkSync(PID_FILE);
+    }
+  } catch (err) {
+    console.warn("[STOP] Unable to remove PID file:", err.message);
+  }
 }
 
-async function stopPulse() {
-  const isWindows = os.platform() === "win32";
+function isPidRunning(pid) {
+  if (!pid || typeof pid !== "number" || pid <= 0) {
+    return false;
+  }
+  try {
+    process.kill(pid, 0);
+    return true;
+  } catch {
+    return false;
+  }
+}
 
-  console.log("[NODE] Stopping Node.js server...");
-  const nodeKilled = isWindows
-    ? await killByPortWindows(3000, "NODE")
-    : await killByPortUnix(3000, "NODE");
-
-  if (nodeKilled) {
-    console.log("[NODE] Node.js server stopped ✅");
-  } else {
-    console.log("[NODE] Node.js server was not running.");
+async function terminateProcess(pid) {
+  if (!isPidRunning(pid)) {
+    return false;
   }
 
-  console.log("[AI] Stopping FastAPI microservice...");
-  const aiKilled = isWindows
-    ? await killByPortWindows(8001, "AI")
-    : await killByPortUnix(8001, "AI");
-
-  if (aiKilled) {
-    console.log("[AI] FastAPI microservice stopped ✅");
-  } else {
-    console.log("[AI] FastAPI microservice was not running.");
+  try {
+    process.kill(pid, "SIGTERM");
+  } catch {
+    // fall through to stronger kills
   }
+
+  const deadline = Date.now() + 1200;
+  while (Date.now() < deadline && isPidRunning(pid)) {
+    await sleep(100);
+  }
+
+  if (isPidRunning(pid)) {
+    try {
+      process.kill(pid, "SIGKILL");
+    } catch {
+      // fall through to platform-specific kill
+    }
+  }
+
+  if (isPidRunning(pid) && os.platform() === "win32") {
+    try {
+      execSync(`taskkill /F /PID ${pid}`, { stdio: "ignore" });
+    } catch {
+      // ignore taskkill errors
+    }
+  }
+
+  return !isPidRunning(pid);
+}
+
+function runFallbackKillers() {
+  if (os.platform() === "win32") {
+    const killNode = `powershell -NoProfile -Command "Get-CimInstance Win32_Process | Where-Object { $_.CommandLine -match 'node server\\.js' } | Stop-Process -Force"`;
+    const killPython = `powershell -NoProfile -Command "Get-CimInstance Win32_Process | Where-Object { $_.CommandLine -match 'ai\\.train_and_serve' } | Stop-Process -Force"`;
+
+    try {
+      execSync(killNode, { stdio: "ignore" });
+    } catch {
+      // ignore errors when nothing matches
+    }
+
+    try {
+      execSync(killPython, { stdio: "ignore" });
+    } catch {
+      // ignore errors when nothing matches
+    }
+  } else {
+    try {
+      execSync('pkill -f "node server.js"', { stdio: "ignore" });
+    } catch {
+      // ignore when no process matches
+    }
+
+    try {
+      execSync('pkill -f "ai.train_and_serve"', { stdio: "ignore" });
+    } catch {
+      // ignore when no process matches
+    }
+  }
+}
+
+async function main() {
+  console.log("============================================================");
+  console.log("     AMPLIFYED PULSE - SHUTDOWN");
+  console.log("============================================================\n");
+
+  const records = readPidFile();
+  const nodeStopped = await terminateProcess(records.node);
+  const pythonStopped = await terminateProcess(records.python);
+
+  removePidFile();
+
+  runFallbackKillers();
+
+  console.log(
+    `[NODE] Node.js server ${nodeStopped ? "stopped" : "not currently running or already stopped"}.`
+  );
+  console.log(
+    `[AI] FastAPI microservice ${pythonStopped ? "stopped" : "not currently running or already stopped"}.`
+  );
 
   console.log("\nAll AmplifyEd Pulse processes stopped.\n");
-  console.log("============================================================\n");
 }
 
-stopPulse();
+main().catch((err) => {
+  console.error("[STOP] Unexpected error:", err.message);
+  process.exit(1);
+});
