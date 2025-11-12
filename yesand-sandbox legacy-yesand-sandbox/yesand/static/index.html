@@ -1,0 +1,495 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>YesAndAI Training Sandbox</title>
+    <style>
+      :root {
+        color-scheme: dark;
+        font-family: "Inter", system-ui, sans-serif;
+        --panel: #0c111c;
+        --panel-strong: #141a28;
+        --border: #1d2440;
+        --muted: #b3bfdf;
+        --accent: #86f2d5;
+        --highlight: #f5a524;
+        --error: #ff6b6b;
+      }
+
+      * {
+        box-sizing: border-box;
+      }
+
+      body {
+        margin: 0;
+        min-height: 100vh;
+        background: radial-gradient(circle at top, #132a5a, #05070d 55%);
+        color: #f4f6fb;
+      }
+
+      .app-shell {
+        padding: 2rem clamp(1rem, 2vw, 2.5rem);
+      }
+
+      .training-header {
+        background: var(--panel);
+        border: 1px solid var(--border);
+        border-radius: 1rem;
+        padding: 1.5rem;
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        gap: 1rem;
+        box-shadow: 0 10px 35px rgba(6, 9, 20, 0.35);
+      }
+
+      .training-header h1 {
+        margin: 0;
+        font-size: clamp(1.8rem, 1.6rem + 1vw, 2.4rem);
+      }
+
+      .training-header p.subtitle {
+        margin: 0.35rem 0 0;
+        color: var(--muted);
+        max-width: 32rem;
+      }
+
+      .pill {
+        display: inline-flex;
+        align-items: center;
+        gap: 0.35rem;
+        padding: 0.35rem 0.8rem;
+        border-radius: 999px;
+        font-size: 0.85rem;
+        letter-spacing: 0.01em;
+        border: 1px solid transparent;
+      }
+
+      .pill--neutral {
+        background: rgba(255, 255, 255, 0.04);
+        border-color: rgba(255, 255, 255, 0.15);
+        color: var(--muted);
+      }
+
+      .pill--loading {
+        border-color: var(--highlight);
+        color: var(--highlight);
+      }
+
+      .pill--yes {
+        background: rgba(134, 242, 213, 0.12);
+        color: var(--accent);
+        border-color: rgba(134, 242, 213, 0.35);
+      }
+
+      .pill--no {
+        background: rgba(255, 107, 107, 0.1);
+        color: var(--error);
+        border-color: rgba(255, 107, 107, 0.4);
+      }
+
+      .workspace {
+        margin-top: 1.5rem;
+        display: grid;
+        grid-template-columns: minmax(0, 2fr) minmax(0, 1fr);
+        gap: 1.5rem;
+      }
+
+      .card {
+        background: var(--panel-strong);
+        border: 1px solid var(--border);
+        border-radius: 1.25rem;
+        padding: 1.75rem;
+        box-shadow: 0 20px 40px rgba(6, 9, 20, 0.4);
+      }
+
+      label {
+        display: block;
+        font-weight: 600;
+        margin-bottom: 0.4rem;
+      }
+
+      textarea {
+        width: 100%;
+        min-height: 140px;
+        background: rgba(255, 255, 255, 0.02);
+        border: 1px solid rgba(255, 255, 255, 0.08);
+        border-radius: 1rem;
+        padding: 1rem;
+        color: #f8fafc;
+        font-size: 1rem;
+        resize: vertical;
+        transition: border-color 0.2s ease;
+        font-family: inherit;
+      }
+
+      textarea:focus {
+        outline: none;
+        border-color: var(--highlight);
+      }
+
+      .controls {
+        margin-top: 1rem;
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 1rem;
+        flex-wrap: wrap;
+      }
+
+      button {
+        border: none;
+        border-radius: 999px;
+        padding: 0.9rem 1.6rem;
+        font-size: 1rem;
+        font-weight: 600;
+        cursor: pointer;
+        background: linear-gradient(120deg, #41a0ff, #8d4bff);
+        color: #fff;
+        transition: transform 0.2s ease, opacity 0.2s ease;
+        box-shadow: 0 10px 20px rgba(20, 21, 30, 0.45);
+      }
+
+      button:disabled {
+        opacity: 0.5;
+        cursor: not-allowed;
+        transform: none;
+      }
+
+      button:not(:disabled):hover {
+        transform: translateY(-1px);
+      }
+
+      .result-panel {
+        margin-top: 1.5rem;
+        border-radius: 1rem;
+        padding: 1.35rem;
+        background: rgba(255, 255, 255, 0.02);
+        border: 1px solid rgba(255, 255, 255, 0.05);
+        display: flex;
+        flex-direction: column;
+        gap: 0.65rem;
+      }
+
+      .pill-row {
+        display: flex;
+        align-items: center;
+        gap: 0.5rem;
+        flex-wrap: wrap;
+      }
+
+      .result-panel p.assistant-title {
+        font-size: 0.85rem;
+        color: var(--muted);
+        letter-spacing: 0.08em;
+        text-transform: uppercase;
+      }
+
+      .result-panel p#suggestionText {
+        font-size: 1.1rem;
+        line-height: 1.5;
+        color: #f8fafc;
+      }
+
+      .trainer-view {
+        padding: 1.2rem;
+        border-radius: 1rem;
+        background: #0b1220;
+        border: 1px solid rgba(255, 255, 255, 0.05);
+      }
+
+      .trainer-view p {
+        margin: 0.45rem 0;
+        line-height: 1.5;
+      }
+
+      .insights-panel {
+        display: flex;
+        flex-direction: column;
+        gap: 1.25rem;
+        max-height: 100%;
+      }
+
+      .tips {
+        background: rgba(255, 255, 255, 0.02);
+        border-radius: 1rem;
+        padding: 1.2rem;
+        border: 1px solid rgba(255, 255, 255, 0.05);
+      }
+
+      .tips h2 {
+        margin: 0 0 0.65rem;
+        font-size: 1rem;
+      }
+
+      .tips ul {
+        margin: 0;
+        padding-left: 1.2rem;
+        color: var(--muted);
+        line-height: 1.6;
+      }
+
+      .history {
+        flex: 1;
+        display: flex;
+        flex-direction: column;
+        border-radius: 1rem;
+        border: 1px solid rgba(255, 255, 255, 0.05);
+        background: rgba(255, 255, 255, 0.02);
+        padding: 1.3rem;
+        overflow: hidden;
+      }
+
+      .history-title {
+        margin: 0 0 0.5rem;
+        font-size: 1rem;
+      }
+
+      .history-list {
+        display: flex;
+        flex-direction: column;
+        gap: 0.9rem;
+        overflow-y: auto;
+        padding-right: 0.3rem;
+      }
+
+      .history-card {
+        background: rgba(5, 7, 13, 0.6);
+        border-radius: 0.9rem;
+        padding: 0.9rem;
+        border: 1px solid rgba(255, 255, 255, 0.05);
+      }
+
+      .history-card p {
+        margin: 0.2rem 0;
+        line-height: 1.4;
+        color: var(--muted);
+      }
+
+      .history-card strong {
+        color: #fff;
+      }
+
+      .history-card .history-category {
+        font-size: 0.85rem;
+      }
+
+      .error-text {
+        margin-top: 0.5rem;
+        color: var(--error);
+        font-size: 0.95rem;
+        min-height: 1.2rem;
+      }
+
+      .empty-history {
+        margin: 0;
+        color: var(--muted);
+        font-size: 0.95rem;
+      }
+
+      @media (max-width: 960px) {
+        .workspace {
+          grid-template-columns: 1fr;
+        }
+
+        .training-header {
+          flex-direction: column;
+          align-items: flex-start;
+        }
+      }
+    </style>
+  </head>
+  <body>
+    <div class="app-shell">
+      <header class="training-header">
+        <div>
+          <p class="eyebrow pill pill--neutral">Training header</p>
+          <h1>YesAndAI Training Sandbox</h1>
+          <p class="subtitle">
+            Practice responding to real teacher pushback with a Yes, and... mindset. This workspace
+            keeps the model's output transparent and lets you study how suggestions shift across
+            different categories.
+          </p>
+        </div>
+        <span class="pill pill--neutral">Model: gpt-4o-mini</span>
+      </header>
+
+      <main class="workspace">
+        <section class="card practice-zone">
+          <label for="teacherMessage">Teacher message</label>
+          <textarea
+            id="teacherMessage"
+            placeholder="e.g. This doesn't apply to my classroom..."
+            aria-label="Teacher message"
+          ></textarea>
+
+          <div class="controls">
+            <button id="generateBtn">Generate Yes, and... Suggestion</button>
+            <span class="pill pill--neutral" id="statusTag">Ready</span>
+          </div>
+
+          <div class="error-text" id="errorArea" aria-live="polite"></div>
+
+          <div class="result-panel">
+            <div class="pill-row">
+              <span class="pill pill--neutral" id="shouldSuggestPill">Awaiting result</span>
+              <span class="pill pill--neutral" id="categoryPill">Category: -</span>
+            </div>
+            <p class="assistant-title">YesAndAI's proposed reply</p>
+            <p id="suggestionText">
+              No suggestion yet. Send a message to see how the engine responds.
+            </p>
+          </div>
+
+          <div class="trainer-view">
+            <p class="trainer-heading"><strong>Trainer View</strong></p>
+            <p><strong>Teacher said:</strong> <span id="trainerTeacher">-</span></p>
+            <p><strong>YesAndAI suggests:</strong> <span id="trainerSuggestion">-</span></p>
+          </div>
+        </section>
+
+        <aside class="card insights-panel">
+          <div class="tips">
+            <h2>Trainer Tips</h2>
+            <ul>
+              <li>Notice when the suggestion validates the teacher before extending the idea.</li>
+              <li>Ask: Would this feel safe and non-judgmental to the teacher?</li>
+              <li>Watch for categories that encourage deeper context or connection.</li>
+            </ul>
+          </div>
+
+          <div class="history">
+            <p class="history-title">Recent interactions</p>
+            <div class="history-list" id="historyList">
+              <p class="empty-history">No interactions yet.</p>
+            </div>
+          </div>
+        </aside>
+      </main>
+    </div>
+
+    <script>
+      const messageInput = document.getElementById("teacherMessage");
+      const generateBtn = document.getElementById("generateBtn");
+      const statusTag = document.getElementById("statusTag");
+      const errorArea = document.getElementById("errorArea");
+      const shouldSuggestPill = document.getElementById("shouldSuggestPill");
+      const categoryPill = document.getElementById("categoryPill");
+      const suggestionText = document.getElementById("suggestionText");
+      const trainerTeacher = document.getElementById("trainerTeacher");
+      const trainerSuggestion = document.getElementById("trainerSuggestion");
+      const historyList = document.getElementById("historyList");
+
+      const MAX_HISTORY = 10;
+      const historyEntries = [];
+
+      const sanitize = (text) =>
+        text
+          ?.replace(/&/g, "&amp;")
+          ?.replace(/</g, "&lt;")
+          ?.replace(/>/g, "&gt;")
+          ?.replace(/"/g, "&quot;") ?? "";
+
+      const setLoading = (isLoading) => {
+        generateBtn.disabled = isLoading;
+        statusTag.textContent = isLoading ? "Waiting for the model..." : "Ready";
+        shouldSuggestPill.classList.toggle("pill--loading", isLoading);
+      };
+
+      const updateResult = (data, teacherMessage) => {
+        const { shouldSuggest, category, suggestion } = data;
+        const suggestionTextVisible = suggestion || "No suggestion provided.";
+
+        shouldSuggestPill.textContent = shouldSuggest ? "Suggestion generated" : "No suggestion";
+        shouldSuggestPill.classList.toggle("pill--yes", shouldSuggest);
+        shouldSuggestPill.classList.toggle("pill--no", shouldSuggest === false);
+        shouldSuggestPill.classList.toggle("pill--neutral", shouldSuggest == null);
+
+        const normalizedCategory = category ?? "none";
+        categoryPill.textContent = `Category: ${normalizedCategory}`;
+
+        suggestionText.textContent = suggestionTextVisible;
+        trainerTeacher.textContent = teacherMessage;
+        trainerSuggestion.textContent = suggestionTextVisible;
+      };
+
+      const pushHistory = (message, data) => {
+        historyEntries.unshift({
+          message,
+          category: data.category ?? "none",
+          suggestion: data.suggestion || "No suggestion",
+        });
+        if (historyEntries.length > MAX_HISTORY) historyEntries.pop();
+        renderHistory();
+      };
+
+      const renderHistory = () => {
+        if (!historyEntries.length) {
+          historyList.innerHTML = '<p class="empty-history">No interactions yet.</p>';
+          return;
+        }
+
+        historyList.innerHTML = historyEntries
+          .map(
+            (entry) => `
+              <article class="history-card">
+                <p><strong>Teacher:</strong> ${sanitize(entry.message)}</p>
+                <p class="history-category"><strong>Category:</strong> ${sanitize(entry.category)}</p>
+                <p><strong>YesAndAI:</strong> ${sanitize(entry.suggestion)}</p>
+              </article>
+            `
+          )
+          .join("");
+      };
+
+      const handleError = (err) => {
+        errorArea.textContent = err?.message || "Something went wrong.";
+      };
+
+      const handleGenerate = async () => {
+        const message = messageInput.value.trim();
+        if (!message) {
+          handleError(new Error("Please add a teacher message to continue."));
+          return;
+        }
+
+        setLoading(true);
+        errorArea.textContent = "";
+
+        try {
+          const response = await fetch("/api/yesand", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ message }),
+          });
+
+          const payload = await response.json();
+          if (!response.ok) throw new Error(payload?.detail || "Unable to generate a suggestion.");
+
+          updateResult(payload, message);
+          pushHistory(message, payload);
+          messageInput.value = "";
+          messageInput.focus();
+        } catch (err) {
+          handleError(err);
+        } finally {
+          setLoading(false);
+        }
+      };
+
+      generateBtn.addEventListener("click", handleGenerate);
+      messageInput.addEventListener("keydown", (event) => {
+        if (event.key === "Enter" && (event.metaKey || event.ctrlKey)) {
+          event.preventDefault();
+          handleGenerate();
+        }
+      });
+
+      window.addEventListener("load", () => {
+        messageInput.focus();
+        renderHistory();
+      });
+    </script>
+  </body>
+</html>

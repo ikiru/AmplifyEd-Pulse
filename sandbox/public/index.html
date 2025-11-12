@@ -1,0 +1,217 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+    <title>AmplifyEd Sandbox — Thread Simulator</title>
+
+    <!-- Socket.IO + client -->
+    <script src="/socket.io/socket.io.js"></script>
+    <script defer src="/client.js"></script>
+
+    <style>
+      :root{
+        --bg:#0f1115; --panel:#181b22; --input:#1f2229; --border:#2a2e36;
+        --text:#f5f5f5; --muted:#b4b7be; --accent:#4fa3ff; --accent2:#7ee787;
+        --danger:#ff6b6b; --warn:#ffb020; --shadow:0 2px 10px rgba(0,0,0,.5)
+      }
+      *{box-sizing:border-box;font-family:Inter,system-ui,Segoe UI,Roboto,Arial,sans-serif}
+      html,body{height:100%}
+      body{margin:0;background:var(--bg);color:var(--text);display:flex;flex-direction:column}
+
+      header{position:relative;background:var(--panel);border-bottom:1px solid var(--border);
+        padding:.8rem 1rem;font-weight:600;letter-spacing:.4px}
+      #themeToggle{position:absolute;right:12px;top:10px;background:var(--input);color:var(--text);
+        border:1px solid var(--border);border-radius:6px;padding:.35rem .6rem;cursor:pointer}
+
+      .wrap{display:grid;grid-template-columns: 1fr 320px;gap:14px;max-width:1200px;width:100%;
+        margin:14px auto;padding:0 12px;flex:1;min-height:0}
+      .card{background:var(--panel);border:1px solid var(--border);border-radius:12px;box-shadow:var(--shadow)}
+      .pad{padding:12px}
+
+      /* left column */
+      .controls{display:flex;flex-wrap:wrap;gap:.5rem;margin-bottom:.6rem;align-items:center}
+      .controls input,.controls select{background:var(--input);color:var(--text);border:1px solid var(--border);
+        border-radius:6px;padding:.45rem .6rem;font-size:.9rem}
+      #statusPill{margin-left:auto;border:1px solid var(--border);background:var(--input);padding:.35rem .6rem;
+        border-radius:999px;font-size:.8rem;color:var(--muted)}
+
+      #thread{height:54vh;min-height:260px;overflow:auto;background:var(--input);border:1px solid var(--border);
+        border-radius:8px;padding:10px;scrollbar-width:thin;scrollbar-color:var(--border) transparent}
+      #thread[aria-live]{outline:none}
+      #thread::-webkit-scrollbar{width:8px} #thread::-webkit-scrollbar-thumb{background:var(--border);border-radius:4px}
+      .msg{border-bottom:1px solid var(--border);padding:.5rem 0;margin:0 0 .4rem}
+      .msg strong{color:var(--accent)}
+      .meta{color:var(--muted);font-size:.8rem}
+
+      .inputRow{display:flex;gap:.5rem;margin-top:.6rem}
+      #messageInput{flex:1;background:var(--input);color:var(--text);border:1px solid var(--border);
+        border-radius:6px;padding:.6rem;font-size:1rem}
+      #sendBtn{background:var(--accent);border:none;color:#fff;padding:.6rem 1rem;border-radius:6px;font-weight:600;cursor:pointer}
+      #sendBtn:hover{filter:brightness(1.1)}
+
+      .tools{display:flex;flex-wrap:wrap;gap:.5rem;margin-top:.5rem}
+      .tools button{background:var(--input);border:1px solid var(--border);color:var(--text);
+        padding:.45rem .7rem;border-radius:6px;cursor:pointer}
+      .tools button:hover{filter:brightness(1.1)}
+
+      /* right column — inspector */
+      .inspector h3{margin:.25rem 0 .6rem;font-size:1rem}
+      .kv{display:flex;justify-content:space-between;margin:.25rem 0;color:var(--muted)}
+      .bar{height:8px;background:#1b1e25;border:1px solid var(--border);border-radius:99px;overflow:hidden}
+      .bar > span{display:block;height:100%;background:var(--accent2);width:0%}
+      .section{border-top:1px solid var(--border);margin-top:.8rem;padding-top:.6rem}
+      .sliderRow{display:flex;align-items:center;gap:.5rem;margin:.35rem 0}
+      .sliderRow input[type="range"]{flex:1}
+      .pill{display:inline-block;padding:.2rem .5rem;border-radius:999px;border:1px solid var(--border);background:var(--input);color:var(--muted);font-size:.75rem}
+
+      /* responsive */
+      @media (max-width: 980px){
+        .wrap{grid-template-columns: 1fr}
+      }
+    </style>
+  </head>
+
+  <body>
+    <header>
+      AmplifyEd Sandbox — Thread Simulator
+      <button id="themeToggle">🌙</button>
+    </header>
+
+    <div class="wrap">
+      <!-- LEFT: main simulator -->
+      <div class="card pad">
+        <div class="controls">
+          <input id="session" placeholder="Session (e.g. demo-1)"/>
+          <input id="user" placeholder="User (e.g. TeacherA)"/>
+          <select id="role">
+            <option value="teacher" selected>Teacher</option>
+            <option value="principal">Principal</option>
+            <option value="nurse">Nurse</option>
+            <option value="student">Student</option>
+          </select>
+          <span id="roleGroupLabel" class="pill">Role Group: educator</span>
+          <span id="statusPill" class="pill">Connecting…</span>
+        </div>
+
+        <div id="thread" aria-live="polite" aria-atomic="false"></div>
+
+        <div class="inputRow">
+          <input id="messageInput" placeholder="Type a message… (Cmd/Ctrl+Enter to send)"/>
+          <button id="sendBtn">Send</button>
+        </div>
+
+        <div class="tools">
+          <!-- Quick seeds -->
+          <button id="seedStall">Seed: Stall</button>
+          <button id="seedConfuse">Seed: Confusion</button>
+          <button id="seedDom">Seed: Dominance</button>
+
+          <!-- Transcript -->
+          <button id="exportJson">Export JSON</button>
+          <button id="copyMd">Copy Markdown</button>
+          <button id="clearLocal">Clear (local)</button>
+
+          <!-- Replay -->
+          <label class="pill" style="cursor:pointer">
+            Replay JSON <input id="replayFile" type="file" accept="application/json" hidden>
+          </label>
+          <button id="replay1x">▶︎ 1×</button>
+          <button id="replay2x">▶︎ 2×</button>
+          <button id="replayStop">⏹</button>
+        </div>
+      </div>
+
+      <!-- RIGHT: inspector/tools -->
+      <aside class="card pad inspector">
+        <h3>Live Inspector</h3>
+
+        <div class="kv"><span>Connected</span><span id="ins-conn" class="pill">…</span></div>
+        <div class="kv"><span>Model</span><span id="ins-model" class="pill">…</span></div>
+        <div class="kv"><span>API</span><span id="ins-api" class="pill">…</span></div>
+
+        <div class="section">
+          <div class="kv"><span>Speaking rate (5m)</span><span id="ins-rate">0 msg/min</span></div>
+          <div class="kv"><span>Dominance</span><span id="ins-dom-pct">0%</span></div>
+          <div class="bar"><span id="bar-dom"></span></div>
+          <div class="kv"><span>“Agree/+1” share</span><span id="ins-agree">0%</span></div>
+          <div class="bar"><span id="bar-agree"></span></div>
+          <div class="kv"><span>Cooldown left</span><span id="ins-cooldown">ready</span></div>
+        </div>
+
+        <div class="section">
+          <h3>Detector Controls</h3>
+          <div class="sliderRow">
+            <label for="thrDom" style="width:110px">Dominance</label>
+            <input id="thrDom" type="range" min="0.1" max="0.9" step="0.05" value="0.40">
+            <span id="valDom" class="pill">0.40</span>
+          </div>
+          <div class="sliderRow">
+            <label for="thrStall" style="width:110px">Stall</label>
+            <input id="thrStall" type="range" min="0.05" max="0.8" step="0.05" value="0.25">
+            <span id="valStall" class="pill">0.25</span>
+          </div>
+          <div class="sliderRow">
+            <label for="cooldown" style="width:110px">Cooldown (s)</label>
+            <input id="cooldown" type="range" min="5" max="180" step="5" value="45">
+            <span id="valCooldown" class="pill">45s</span>
+          </div>
+        </div>
+
+        <div class="section">
+          <h3>Prompt Viewer</h3>
+          <textarea id="promptOverride" rows="8" style="width:100%;resize:vertical;background:var(--input);color:var(--text);border:1px solid var(--border);border-radius:8px;padding:8px" placeholder="(optional) Paste a system prompt override here…"></textarea>
+          <div style="display:flex;gap:.5rem;margin-top:.5rem">
+            <button id="applyPrompt">Apply (send to server if supported)</button>
+            <button id="resetPrompt">Reset</button>
+          </div>
+          <p style="color:var(--muted);font-size:.85rem;margin:.5rem 0 0">
+            Note: The server must implement <code>socket.on("tuning")</code> / <code>socket.on("promptOverride")</code> to use these live.
+          </p>
+        </div>
+
+        <div class="section">
+          <h3>Sessions</h3>
+          <div style="display:flex;gap:.5rem;flex-wrap:wrap">
+            <button class="pill sessTab" data-s="demo-1">demo-1</button>
+            <button class="pill sessTab" data-s="demo-2">demo-2</button>
+            <button class="pill sessTab" data-s="pd-room-a">pd-room-a</button>
+          </div>
+        </div>
+      </aside>
+    </div>
+
+    <script>
+      // Theme toggle
+      const root = document.documentElement;
+      const toggle = document.getElementById('themeToggle');
+      let dark = true;
+      toggle.addEventListener('click', ()=>{
+        dark = !dark;
+        if (dark){
+          root.style.setProperty('--bg','#0f1115'); root.style.setProperty('--panel','#181b22');
+          root.style.setProperty('--input','#1f2229'); root.style.setProperty('--text','#f5f5f5');
+          toggle.textContent = '🌙';
+        } else {
+          root.style.setProperty('--bg','#f7f7f7'); root.style.setProperty('--panel','#ffffff');
+          root.style.setProperty('--input','#f1f3f5'); root.style.setProperty('--text','#1b1b1b');
+          toggle.textContent = '☀️';
+        }
+      });
+
+      // Prefill from URL + localStorage
+      const Q = new URLSearchParams(location.search);
+      const pref = JSON.parse(localStorage.getItem("sandboxPrefs")||"{}");
+      const sessionEl = document.getElementById("session");
+      const userEl    = document.getElementById("user");
+      const roleEl    = document.getElementById("role");
+      sessionEl.value = Q.get("session") || pref.session || "demo-1";
+      userEl.value    = Q.get("user")    || pref.user    || "User";
+      roleEl.value    = Q.get("role")    || pref.role    || "teacher";
+      function savePrefs(){
+        localStorage.setItem("sandboxPrefs", JSON.stringify({session:sessionEl.value,user:userEl.value,role:roleEl.value}))
+      }
+      ["change","input"].forEach(ev=>[sessionEl,userEl,roleEl].forEach(el=>el.addEventListener(ev, savePrefs)));
+    </script>
+  </body>
+</html>

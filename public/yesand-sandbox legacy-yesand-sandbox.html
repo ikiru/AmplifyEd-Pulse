@@ -1,0 +1,451 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta http-equiv="X-UA-Compatible" content="IE=edge" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>YesAndAI Training Sandbox</title>
+    <link rel="stylesheet" href="/css/theme.css" />
+    <style>
+      body {
+        background: #05070d;
+        color: #f4f6fb;
+        margin: 0;
+      }
+
+      .sandbox-shell {
+        max-width: 1200px;
+        margin: 0 auto;
+        padding: 2rem 1.25rem 3rem;
+        display: flex;
+        flex-direction: column;
+        gap: 1.5rem;
+      }
+
+      header.sandbox-header {
+        display: flex;
+        flex-direction: column;
+        gap: 0.35rem;
+      }
+
+      header.sandbox-header h1 {
+        margin: 0;
+        font-size: clamp(2rem, 2vw, 2.6rem);
+      }
+
+      header.sandbox-header p {
+        margin: 0;
+        color: #c3cee4;
+        max-width: 720px;
+      }
+
+      .sandbox-grid {
+        display: grid;
+        grid-template-columns: minmax(0, 2fr) minmax(280px, 1fr);
+        gap: 1.5rem;
+      }
+
+      .panel {
+        background: rgba(255, 255, 255, 0.04);
+        border: 1px solid rgba(255, 255, 255, 0.08);
+        border-radius: 1.2rem;
+        padding: 1.5rem;
+        box-shadow: 0 20px 40px rgba(5, 7, 13, 0.45);
+      }
+
+      .batch-panel {
+        border-radius: 1rem;
+        padding: 1.2rem;
+        margin-bottom: 1.25rem;
+        border: 1px solid rgba(255, 255, 255, 0.08);
+        background: rgba(255, 255, 255, 0.02);
+      }
+
+      .batch-panel h2 {
+        margin: 0;
+        font-size: 1rem;
+        color: #c3cee4;
+        letter-spacing: 0.06em;
+        text-transform: uppercase;
+      }
+
+      .batch-description {
+        margin: 0.45rem 0 0.9rem;
+        color: #cfcfe0;
+        font-size: 0.95rem;
+      }
+
+      .batch-panel input[type="file"] {
+        width: 100%;
+        margin-bottom: 0.6rem;
+        color: #cfcfe0;
+      }
+
+      .batch-status {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        font-size: 0.9rem;
+        color: #cfcfe0;
+        margin-bottom: 0.8rem;
+      }
+
+      #nextMessageBtn {
+        width: 100%;
+        border: 1px solid rgba(255, 255, 255, 0.2);
+        background: transparent;
+        color: #fff;
+        border-radius: 999px;
+        padding: 0.75rem 1rem;
+        font-weight: 600;
+        cursor: pointer;
+        transition: opacity 0.2s ease;
+      }
+
+      #nextMessageBtn:disabled {
+        opacity: 0.4;
+        cursor: not-allowed;
+      }
+
+      label {
+        display: block;
+        margin-bottom: 0.4rem;
+        font-weight: 600;
+        color: #f8fafc;
+      }
+
+      textarea {
+        width: 100%;
+        min-height: 160px;
+        border-radius: 1rem;
+        border: 1px solid rgba(255, 255, 255, 0.15);
+        background: rgba(255, 255, 255, 0.03);
+        color: #f8fafc;
+        padding: 1rem;
+        font-size: 1rem;
+        resize: vertical;
+        font-family: inherit;
+      }
+
+      select,
+      option {
+        width: 100%;
+        border-radius: 0.75rem;
+        padding: 0.85rem 1rem;
+        border: 1px solid rgba(255, 255, 255, 0.15);
+        background: rgba(255, 255, 255, 0.03);
+        color: #000;
+        font-size: 1rem;
+      }
+
+      select:focus,
+      option:hover {
+        background-color: #f0f0f0;
+        color: #111;
+      }
+
+      .controls {
+        margin-top: 1rem;
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 1rem;
+        flex-wrap: wrap;
+      }
+
+      button.primary {
+        border: none;
+        border-radius: 999px;
+        padding: 0.95rem 1rem;
+        font-size: 1rem;
+        font-weight: 600;
+        color: white;
+        background: linear-gradient(120deg, #41a0ff, #8d4bff);
+        cursor: pointer;
+        transition: opacity 0.2s ease;
+        width: 100%;
+      }
+
+      .result-area {
+        margin-top: 1.25rem;
+        background: rgba(255, 255, 255, 0.02);
+        padding: 1.1rem;
+        border-radius: 1rem;
+        border: 1px solid rgba(255, 255, 255, 0.08);
+      }
+
+      .score-board {
+        margin-top: 1rem;
+        padding: 0.8rem;
+        border-radius: 0.9rem;
+        border: 1px solid rgba(255, 255, 255, 0.08);
+        background: rgba(255, 255, 255, 0.03);
+      }
+
+      .score-board h3 {
+        margin: 0;
+        font-size: 0.85rem;
+        letter-spacing: 0.08em;
+        text-transform: uppercase;
+        color: #c3cee4;
+      }
+
+      #scoreList {
+        margin-top: 0.6rem;
+        display: flex;
+        flex-direction: column;
+        gap: 0.35rem;
+      }
+
+      .score-item {
+        display: flex;
+        justify-content: space-between;
+        font-size: 0.9rem;
+        color: #f4f6fb;
+      }
+
+      .result-area h2 {
+        margin: 0;
+        font-size: 1rem;
+        letter-spacing: 0.08em;
+        color: #c3cee4;
+        text-transform: uppercase;
+      }
+
+      .result-area p {
+        margin: 0.4rem 0 0;
+        font-size: 1.05rem;
+        line-height: 1.5;
+      }
+
+      .trainer-view {
+        margin-top: 1rem;
+        padding: 0.95rem;
+        border-radius: 0.9rem;
+        background: rgba(255, 255, 255, 0.02);
+        border: 1px solid rgba(255, 255, 255, 0.06);
+      }
+
+      .trainer-view p {
+        margin: 0.3rem 0;
+        font-size: 0.95rem;
+        line-height: 1.4;
+      }
+
+      .feedback-section {
+        margin-top: 1.25rem;
+        padding: 1rem;
+        border-radius: 1rem;
+        border: 1px solid rgba(255, 255, 255, 0.08);
+        background: rgba(255, 255, 255, 0.01);
+      }
+
+      .feedback-section h3 {
+        margin: 0 0 0.35rem;
+        text-transform: uppercase;
+        letter-spacing: 0.08em;
+        font-size: 0.9rem;
+        color: #c3cee4;
+      }
+
+      .feedback-actions {
+        display: flex;
+        gap: 0.75rem;
+        margin-bottom: 0.65rem;
+      }
+
+      .feedback-actions button {
+        flex: 1;
+        border-radius: 0.75rem;
+        padding: 0.65rem;
+        border: 1px solid rgba(255, 255, 255, 0.3);
+        background: rgba(255, 255, 255, 0.02);
+        color: #fff;
+        font-size: 1rem;
+        cursor: pointer;
+      }
+
+      .feedback-actions button:disabled {
+        opacity: 0.4;
+        cursor: not-allowed;
+      }
+
+      .rewrite-panel textarea {
+        width: 100%;
+        min-height: 90px;
+        padding: 0.75rem;
+        border-radius: 0.75rem;
+        border: 1px solid rgba(255, 255, 255, 0.2);
+        background: rgba(255, 255, 255, 0.03);
+        color: #f4f6fb;
+        font-size: 0.95rem;
+        resize: vertical;
+      }
+
+      .rewrite-panel button {
+        margin-top: 0.6rem;
+        border: none;
+        border-radius: 0.75rem;
+        padding: 0.7rem 1rem;
+        font-weight: 600;
+        cursor: pointer;
+        background: #41a0ff;
+        color: #fff;
+      }
+
+      .feedback-status {
+        margin-top: 0.55rem;
+        font-size: 0.9rem;
+        color: #c3cee4;
+      }
+
+      .hidden {
+        display: none;
+      }
+
+      .right-column {
+        display: flex;
+        flex-direction: column;
+        gap: 1rem;
+        max-height: calc(100vh - 3rem);
+      }
+
+      .tips ul {
+        margin: 0;
+        padding-left: 1.2rem;
+        color: #cfcfe0;
+        line-height: 1.6;
+      }
+
+      .trending-list {
+        max-height: 320px;
+        overflow-y: auto;
+        display: flex;
+        flex-direction: column;
+        gap: 0.85rem;
+      }
+
+      .recent-card {
+        border-radius: 0.9rem;
+        border: 1px solid rgba(255, 255, 255, 0.08);
+        padding: 0.85rem;
+        background: rgba(5, 7, 13, 0.7);
+      }
+
+      .recent-card p {
+        margin: 0.25rem 0;
+        font-size: 0.9rem;
+        line-height: 1.4;
+      }
+
+      .error-message {
+        margin-top: 0.6rem;
+        color: #ff6b6b;
+        font-size: 0.9rem;
+      }
+
+      @media (max-width: 900px) {
+        .sandbox-grid {
+          grid-template-columns: 1fr;
+        }
+      }
+    </style>
+  </head>
+  <body>
+    <div class="sandbox-shell">
+      <header class="sandbox-header">
+        <h1>YesAndAI Training Sandbox</h1>
+        <p>
+          Practice responding to real teacher pushback with a Yes, and… mindset. This workspace
+          keeps the model’s output transparent and lets you study how suggestions shift across
+          different categories.
+        </p>
+      </header>
+
+      <div class="sandbox-grid">
+        <section class="panel">
+          <div class="batch-panel">
+            <h2>Batch Mode: CSV Upload</h2>
+            <p class="batch-description">
+              Upload a CSV of teacher messages to step through them one at a time.
+            </p>
+            <input type="file" id="csvUpload" accept=".csv" />
+            <div class="batch-status">
+              <span id="csvStatus">No file loaded</span>
+              <span id="csvCounter"></span>
+            </div>
+            <button id="nextMessageBtn" disabled>Next Message</button>
+          </div>
+
+          <label for="teacherMessage">Teacher message</label>
+          <textarea id="teacherMessage" placeholder="e.g. This doesn't apply to my classroom..."></textarea>
+
+          <label for="categorySelect">Category</label>
+          <select id="categorySelect"></select>
+
+          <div class="controls">
+            <button id="generateBtn" class="primary">Generate Yes, and... Suggestion</button>
+          </div>
+
+          <div class="error-message" id="errorMessage"></div>
+
+          <div class="result-area">
+            <div class="pill-row">
+              <span class="badge" id="categoryBadge">Category: none</span>
+            </div>
+            <h2>YesAndAI Proposed Reply</h2>
+            <p id="suggestionText">No suggestion provided.</p>
+            <div class="score-board" id="scoreBoard">
+              <h3>Category probabilities</h3>
+              <div id="scoreList">
+                <p>No scores yet.</p>
+              </div>
+            </div>
+            <div class="trainer-view">
+              <p><strong>Teacher said:</strong> <span id="trainerTeacher">—</span></p>
+              <p><strong>Category:</strong> <span id="trainerCategory">—</span></p>
+              <p><strong>YesAndAI suggests:</strong> <span id="trainerSuggestion">—</span></p>
+            </div>
+
+            <div class="feedback-section">
+              <h3>Trainer Feedback</h3>
+              <p>Was this suggestion helpful?</p>
+              <div class="feedback-actions">
+                <button id="thumbsUpBtn">👍 Helpful</button>
+                <button id="thumbsDownBtn">👎 Needs rewrite</button>
+              </div>
+              <div id="rewritePanel" class="rewrite-panel hidden">
+                <label for="trainerImprovement">Your improved version:</label>
+                <textarea id="trainerImprovement" placeholder="Rewrite the reply here..."></textarea>
+                <button id="submitFeedbackBtn">Submit Feedback</button>
+              </div>
+              <p class="feedback-status" id="feedbackStatus"></p>
+            </div>
+          </div>
+        </section>
+
+        <aside class="panel right-column">
+          <div class="tips">
+            <h2>Trainer Tips</h2>
+            <ul>
+              <li>Notice when the suggestion validates the teacher before extending the idea.</li>
+              <li>Ask: Would this feel safe and non-judgmental to the teacher?</li>
+              <li>Watch for categories that encourage deeper context or connection.</li>
+            </ul>
+          </div>
+
+          <div>
+            <h2>Recent Interactions</h2>
+            <div class="trending-list" id="historyList">
+              <div class="recent-card">
+                <p>No interactions yet.</p>
+              </div>
+            </div>
+          </div>
+        </aside>
+      </div>
+    </div>
+
+    <script src="/yesand-sandbox.js"></script>
+  </body>
+</html>
