@@ -1,0 +1,33 @@
+AmplifyEd Pulse running at http://localhost:3000
+AmplifyEd Pulse running at http://localhost:3000
+[Server] New socket connected: sYkx8PmFuSDayHEJAAAB
+[Server] Stage requested a session from sYkx8PmFuSDayHEJAAAB
+[Server] Created session ZCWJ7J for stage socket sYkx8PmFuSDayHEJAAAB
+[Server] New socket connected: 9i7nPfsS7j19UrU3AAAD
+[Server] Stage requested a session from 9i7nPfsS7j19UrU3AAAD
+[Server] Created session SF7CYZ for stage socket 9i7nPfsS7j19UrU3AAAD
+Client disconnected: 9i7nPfsS7j19UrU3AAAD
+[Server] New socket connected: 6wEMC4zV4Kl2i8XTAAAF
+[Server] audience:joinSession ZCWJ7J from 6wEMC4zV4Kl2i8XTAAAF
+[Server] audience:sessionJoined ZCWJ7J from 6wEMC4zV4Kl2i8XTAAAF
+AmplifyEd Pulse running at http://localhost:3000
+[Server] New socket connected: 9JHfO6Lb8Fo6TEK6AAAB
+[Server] Stage requested a session from 9JHfO6Lb8Fo6TEK6AAAB
+[Server] Created session Y9YPST for stage socket 9JHfO6Lb8Fo6TEK6AAAB
+Client disconnected: 9JHfO6Lb8Fo6TEK6AAAB
+[Server] New socket connected: -Pe3PiQJPwluALLhAAAD
+[Server] Stage requested a session from -Pe3PiQJPwluALLhAAAD
+[Server] Created session GDTDGF for stage socket -Pe3PiQJPwluALLhAAAD
+Client disconnected: -Pe3PiQJPwluALLhAAAD
+[Server] New socket connected: 4H_b4JDAss1xzRxdAAAF
+[Server] Stage requested a session from 4H_b4JDAss1xzRxdAAAF
+[Server] Created session YYNUER for stage socket 4H_b4JDAss1xzRxdAAAF
+Client disconnected: 4H_b4JDAss1xzRxdAAAF
+[Server] New socket connected: Oi7wXCvtDQaQahULAAAH
+[Server] Stage requested a session from Oi7wXCvtDQaQahULAAAH
+[Server] Created session Y2MEBW for stage socket Oi7wXCvtDQaQahULAAAH
+[Server] New socket connected: qf2qiNlhzhhWxundAAAJ
+[Server] audience:joinSession Y2MEBW from qf2qiNlhzhhWxundAAAJ
+[Server] audience:sessionJoined Y2MEBW from qf2qiNlhzhhWxundAAAJ
+Client disconnected: qf2qiNlhzhhWxundAAAJ
+Client disconnected: Oi7wXCvtDQaQahULAAAH

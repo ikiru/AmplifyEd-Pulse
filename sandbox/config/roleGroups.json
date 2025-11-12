@@ -1,0 +1,8 @@
+{
+  "teacher": "educator",
+  "principal": "educator",
+  "coach": "educator",
+  "librarian": "educator",
+  "nurse": "nurse",
+  "school_nurse": "nurse"
+}
