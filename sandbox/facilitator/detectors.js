@@ -1,7 +1,6 @@
 // Simple, tunable heuristics for "stalled", "confused", "dominating", etc.
 
 export function updateStats(session, msg) {
-  session.messages.push(msg);
   const { userId, text, ts, authorType } = msg;
   if (authorType === "bot") return;
 
@@ -16,8 +15,17 @@ export function classifyContent(text) {
   const t = (text || "").trim().toLowerCase();
 
   if (["i agree", "agree", "+1", "same", "👍"].includes(t)) return "agreement";
-  if (t.includes("i don’t understand") || t.includes("i don't understand") || t.includes("what are we doing") || t.endsWith("?"))
+  if (
+    t.includes("confus") ||
+    t.includes("lost") ||
+    t.includes("not sure") ||
+    t.includes("i don’t understand") ||
+    t.includes("i don't understand") ||
+    t.includes("what are we doing") ||
+    t.endsWith("?")
+  ) {
     return "confusion";
+  }
   if (/waste of time|nothing ever changes|this is stupid/i.test(t)) return "venting";
   if (t.length < 3) return "other";
   return "constructive";

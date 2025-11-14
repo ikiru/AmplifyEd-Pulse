@@ -1,0 +1,20 @@
+[
+  {
+    "id": "fabf46ec-9589-496b-8c04-7f1ba78d3b3a",
+    "sessionId": "demo-1",
+    "userId": "TeacherA",
+    "role": "teacher",
+    "authorType": "human",
+    "text": "i am so confused",
+    "ts": 1763124936239
+  },
+  {
+    "id": "4ea60423-23a8-419f-9b67-7926a6c9efda",
+    "sessionId": "demo-1",
+    "userId": "AmplifyEd",
+    "role": "teacher",
+    "authorType": "bot",
+    "text": "It sounds like there’s some uncertainty about the purpose of our discussion. Our goal is to collaboratively explore effective classroom practices and leadership strategies. What specific aspect are you feeling most confused about right now?",
+    "ts": 1763124938613
+  }
+]

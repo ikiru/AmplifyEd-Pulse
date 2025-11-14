@@ -2,12 +2,11 @@
 <html lang="en">
   <head>
     <meta charset="UTF-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>AmplifyEd Sandbox — Thread Simulator</title>
 
-    <!-- Socket.IO + client -->
+    <!-- Socket.IO (client.js is loaded at the bottom) -->
     <script src="/socket.io/socket.io.js"></script>
-    <script defer src="/client.js"></script>
 
     <style>
       :root{
@@ -19,51 +18,184 @@
       html,body{height:100%}
       body{margin:0;background:var(--bg);color:var(--text);display:flex;flex-direction:column}
 
-      header{position:relative;background:var(--panel);border-bottom:1px solid var(--border);
-        padding:.8rem 1rem;font-weight:600;letter-spacing:.4px}
-      #themeToggle{position:absolute;right:12px;top:10px;background:var(--input);color:var(--text);
-        border:1px solid var(--border);border-radius:6px;padding:.35rem .6rem;cursor:pointer}
+      header{
+        position:relative;
+        background:var(--panel);
+        border-bottom:1px solid var(--border);
+        padding:.8rem 1rem;
+        font-weight:600;
+        letter-spacing:.4px;
+      }
+      #themeToggle{
+        position:absolute;
+        right:12px;
+        top:10px;
+        background:var(--input);
+        color:var(--text);
+        border:1px solid var(--border);
+        border-radius:6px;
+        padding:.35rem .6rem;
+        cursor:pointer;
+      }
 
-      .wrap{display:grid;grid-template-columns: 1fr 320px;gap:14px;max-width:1200px;width:100%;
-        margin:14px auto;padding:0 12px;flex:1;min-height:0}
-      .card{background:var(--panel);border:1px solid var(--border);border-radius:12px;box-shadow:var(--shadow)}
+      .wrap{
+        display:grid;
+        grid-template-columns: 1fr 320px;
+        gap:14px;
+        max-width:1200px;
+        width:100%;
+        margin:14px auto;
+        padding:0 12px;
+        flex:1;
+        min-height:0;
+      }
+      .card{
+        background:var(--panel);
+        border:1px solid var(--border);
+        border-radius:12px;
+        box-shadow:var(--shadow);
+      }
       .pad{padding:12px}
 
       /* left column */
-      .controls{display:flex;flex-wrap:wrap;gap:.5rem;margin-bottom:.6rem;align-items:center}
-      .controls input,.controls select{background:var(--input);color:var(--text);border:1px solid var(--border);
-        border-radius:6px;padding:.45rem .6rem;font-size:.9rem}
-      #statusPill{margin-left:auto;border:1px solid var(--border);background:var(--input);padding:.35rem .6rem;
-        border-radius:999px;font-size:.8rem;color:var(--muted)}
+      .controls{
+        display:flex;
+        flex-wrap:wrap;
+        gap:.5rem;
+        margin-bottom:.6rem;
+        align-items:center;
+      }
+      .controls input,
+      .controls select{
+        background:var(--input);
+        color:var(--text);
+        border:1px solid var(--border);
+        border-radius:6px;
+        padding:.45rem .6rem;
+        font-size:.9rem;
+      }
+      #statusPill{
+        margin-left:auto;
+        border:1px solid var(--border);
+        background:var(--input);
+        padding:.35rem .6rem;
+        border-radius:999px;
+        font-size:.8rem;
+        color:var(--muted);
+      }
 
-      #thread{height:54vh;min-height:260px;overflow:auto;background:var(--input);border:1px solid var(--border);
-        border-radius:8px;padding:10px;scrollbar-width:thin;scrollbar-color:var(--border) transparent}
+      #thread{
+        height:54vh;
+        min-height:260px;
+        overflow:auto;
+        background:var(--input);
+        border:1px solid var(--border);
+        border-radius:8px;
+        padding:10px;
+        scrollbar-width:thin;
+        scrollbar-color:var(--border) transparent;
+      }
       #thread[aria-live]{outline:none}
-      #thread::-webkit-scrollbar{width:8px} #thread::-webkit-scrollbar-thumb{background:var(--border);border-radius:4px}
-      .msg{border-bottom:1px solid var(--border);padding:.5rem 0;margin:0 0 .4rem}
+      #thread::-webkit-scrollbar{width:8px}
+      #thread::-webkit-scrollbar-thumb{
+        background:var(--border);
+        border-radius:4px;
+      }
+
+      .msg{
+        border-bottom:1px solid var(--border);
+        padding:.5rem 0;
+        margin:0 0 .4rem;
+      }
       .msg strong{color:var(--accent)}
       .meta{color:var(--muted);font-size:.8rem}
 
-      .inputRow{display:flex;gap:.5rem;margin-top:.6rem}
-      #messageInput{flex:1;background:var(--input);color:var(--text);border:1px solid var(--border);
-        border-radius:6px;padding:.6rem;font-size:1rem}
-      #sendBtn{background:var(--accent);border:none;color:#fff;padding:.6rem 1rem;border-radius:6px;font-weight:600;cursor:pointer}
+      .inputRow{
+        display:flex;
+        gap:.5rem;
+        margin-top:.6rem;
+      }
+      #messageInput{
+        flex:1;
+        background:var(--input);
+        color:var(--text);
+        border:1px solid var(--border);
+        border-radius:6px;
+        padding:.6rem;
+        font-size:1rem;
+      }
+      #sendBtn{
+        background:var(--accent);
+        border:none;
+        color:#fff;
+        padding:.6rem 1rem;
+        border-radius:6px;
+        font-weight:600;
+        cursor:pointer;
+      }
       #sendBtn:hover{filter:brightness(1.1)}
 
-      .tools{display:flex;flex-wrap:wrap;gap:.5rem;margin-top:.5rem}
-      .tools button{background:var(--input);border:1px solid var(--border);color:var(--text);
-        padding:.45rem .7rem;border-radius:6px;cursor:pointer}
+      .tools{
+        display:flex;
+        flex-wrap:wrap;
+        gap:.5rem;
+        margin-top:.5rem;
+      }
+      .tools button{
+        background:var(--input);
+        border:1px solid var(--border);
+        color:var(--text);
+        padding:.45rem .7rem;
+        border-radius:6px;
+        cursor:pointer;
+      }
       .tools button:hover{filter:brightness(1.1)}
 
       /* right column — inspector */
-      .inspector h3{margin:.25rem 0 .6rem;font-size:1rem}
-      .kv{display:flex;justify-content:space-between;margin:.25rem 0;color:var(--muted)}
-      .bar{height:8px;background:#1b1e25;border:1px solid var(--border);border-radius:99px;overflow:hidden}
-      .bar > span{display:block;height:100%;background:var(--accent2);width:0%}
-      .section{border-top:1px solid var(--border);margin-top:.8rem;padding-top:.6rem}
-      .sliderRow{display:flex;align-items:center;gap:.5rem;margin:.35rem 0}
+      .inspector h3{
+        margin:.25rem 0 .6rem;
+        font-size:1rem;
+      }
+      .kv{
+        display:flex;
+        justify-content:space-between;
+        margin:.25rem 0;
+        color:var(--muted);
+      }
+      .bar{
+        height:8px;
+        background:#1b1e25;
+        border:1px solid var(--border);
+        border-radius:99px;
+        overflow:hidden;
+      }
+      .bar > span{
+        display:block;
+        height:100%;
+        background:var(--accent2);
+        width:0%;
+      }
+      .section{
+        border-top:1px solid var(--border);
+        margin-top:.8rem;
+        padding-top:.6rem;
+      }
+      .sliderRow{
+        display:flex;
+        align-items:center;
+        gap:.5rem;
+        margin:.35rem 0;
+      }
       .sliderRow input[type="range"]{flex:1}
-      .pill{display:inline-block;padding:.2rem .5rem;border-radius:999px;border:1px solid var(--border);background:var(--input);color:var(--muted);font-size:.75rem}
+      .pill{
+        display:inline-block;
+        padding:.2rem .5rem;
+        border-radius:999px;
+        border:1px solid var(--border);
+        background:var(--input);
+        color:var(--muted);
+        font-size:.75rem;
+      }
 
       /* responsive */
       @media (max-width: 980px){
@@ -82,8 +214,8 @@
       <!-- LEFT: main simulator -->
       <div class="card pad">
         <div class="controls">
-          <input id="session" placeholder="Session (e.g. demo-1)"/>
-          <input id="user" placeholder="User (e.g. TeacherA)"/>
+          <input id="session" placeholder="Session (e.g. demo-1)" />
+          <input id="user" placeholder="User (e.g. TeacherA)" />
           <select id="role">
             <option value="teacher" selected>Teacher</option>
             <option value="principal">Principal</option>
@@ -97,7 +229,7 @@
         <div id="thread" aria-live="polite" aria-atomic="false"></div>
 
         <div class="inputRow">
-          <input id="messageInput" placeholder="Type a message… (Cmd/Ctrl+Enter to send)"/>
+          <input id="messageInput" placeholder="Type a message… (Cmd/Ctrl+Enter to send)" />
           <button id="sendBtn">Send</button>
         </div>
 
@@ -160,13 +292,19 @@
 
         <div class="section">
           <h3>Prompt Viewer</h3>
-          <textarea id="promptOverride" rows="8" style="width:100%;resize:vertical;background:var(--input);color:var(--text);border:1px solid var(--border);border-radius:8px;padding:8px" placeholder="(optional) Paste a system prompt override here…"></textarea>
+          <textarea
+            id="promptOverride"
+            rows="8"
+            style="width:100%;resize:vertical;background:var(--input);color:var(--text);border:1px solid var(--border);border-radius:8px;padding:8px"
+            placeholder="(optional) Paste a system prompt override here…"
+          ></textarea>
           <div style="display:flex;gap:.5rem;margin-top:.5rem">
             <button id="applyPrompt">Apply (send to server if supported)</button>
             <button id="resetPrompt">Reset</button>
           </div>
           <p style="color:var(--muted);font-size:.85rem;margin:.5rem 0 0">
-            Note: The server must implement <code>socket.on("tuning")</code> / <code>socket.on("promptOverride")</code> to use these live.
+            Note: The server must implement <code>socket.on("tuning")</code> /
+            <code>socket.on("promptOverride")</code> to use these live.
           </p>
         </div>
 
@@ -181,37 +319,65 @@
       </aside>
     </div>
 
+    <!-- Small inline script: theme + initial prefs (scoped to avoid conflicts) -->
     <script>
-      // Theme toggle
-      const root = document.documentElement;
-      const toggle = document.getElementById('themeToggle');
-      let dark = true;
-      toggle.addEventListener('click', ()=>{
-        dark = !dark;
-        if (dark){
-          root.style.setProperty('--bg','#0f1115'); root.style.setProperty('--panel','#181b22');
-          root.style.setProperty('--input','#1f2229'); root.style.setProperty('--text','#f5f5f5');
-          toggle.textContent = '🌙';
-        } else {
-          root.style.setProperty('--bg','#f7f7f7'); root.style.setProperty('--panel','#ffffff');
-          root.style.setProperty('--input','#f1f3f5'); root.style.setProperty('--text','#1b1b1b');
-          toggle.textContent = '☀️';
-        }
-      });
+      (function () {
+        // Theme toggle
+        const root   = document.documentElement;
+        const toggle = document.getElementById("themeToggle");
+        let dark = true;
 
-      // Prefill from URL + localStorage
-      const Q = new URLSearchParams(location.search);
-      const pref = JSON.parse(localStorage.getItem("sandboxPrefs")||"{}");
-      const sessionEl = document.getElementById("session");
-      const userEl    = document.getElementById("user");
-      const roleEl    = document.getElementById("role");
-      sessionEl.value = Q.get("session") || pref.session || "demo-1";
-      userEl.value    = Q.get("user")    || pref.user    || "User";
-      roleEl.value    = Q.get("role")    || pref.role    || "teacher";
-      function savePrefs(){
-        localStorage.setItem("sandboxPrefs", JSON.stringify({session:sessionEl.value,user:userEl.value,role:roleEl.value}))
-      }
-      ["change","input"].forEach(ev=>[sessionEl,userEl,roleEl].forEach(el=>el.addEventListener(ev, savePrefs)));
+        if (toggle) {
+          toggle.addEventListener("click", () => {
+            dark = !dark;
+            if (dark) {
+              root.style.setProperty("--bg", "#0f1115");
+              root.style.setProperty("--panel", "#181b22");
+              root.style.setProperty("--input", "#1f2229");
+              root.style.setProperty("--text", "#f5f5f5");
+              toggle.textContent = "🌙";
+            } else {
+              root.style.setProperty("--bg", "#f7f7f7");
+              root.style.setProperty("--panel", "#ffffff");
+              root.style.setProperty("--input", "#f1f3f5");
+              root.style.setProperty("--text", "#1b1b1b");
+              toggle.textContent = "☀️";
+            }
+          });
+        }
+
+        // Prefill from URL + localStorage
+        const Q    = new URLSearchParams(location.search);
+        const pref = JSON.parse(localStorage.getItem("sandboxPrefs") || "{}");
+
+        const sessionField = document.getElementById("session");
+        const userField    = document.getElementById("user");
+        const roleField    = document.getElementById("role");
+
+        if (sessionField) sessionField.value = Q.get("session") || pref.session || "demo-1";
+        if (userField)    userField.value    = Q.get("user")    || pref.user    || "User";
+        if (roleField)    roleField.value    = Q.get("role")    || pref.role    || "teacher";
+
+        function savePrefs() {
+          localStorage.setItem(
+            "sandboxPrefs",
+            JSON.stringify({
+              session: sessionField?.value || "demo-1",
+              user   : userField?.value    || "User",
+              role   : roleField?.value    || "teacher"
+            })
+          );
+        }
+
+        ["change", "input"].forEach((ev) =>
+          [sessionField, userField, roleField].forEach(
+            (el) => el && el.addEventListener(ev, savePrefs)
+          )
+        );
+      })();
     </script>
+
+    <!-- Main client logic (Socket.IO + UI wiring) -->
+    <script defer src="client.js"></script>
   </body>
 </html>
