@@ -11,9 +11,10 @@
   "dependencies": {
     "dotenv": "^16.4.5",
     "express": "^4.19.2",
-    "fs": "0.0.1-security",
+    "ws": "^8.17.0",
     "http": "0.0.1-security",
-    "openai": "^4.63.0",
+    "https": "0.0.1-security",
+    "axios": "^1.6.0",
     "path": "^0.12.7",
     "socket.io": "^4.7.5",
     "uuid": "^9.0.1"
@@ -22,3 +23,4 @@
     "node": ">=18.0.0"
   }
 }
+

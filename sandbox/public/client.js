@@ -34,6 +34,7 @@ const barDom       = $id('bar-dom');
 const insAgree     = $id('ins-agree');
 const barAgree     = $id('bar-agree');
 const insCooldown  = $id('ins-cooldown');
+let cooldownOverride = null;
 
 // Seeds/tools
 const btnSeedStall   = $id('seedStall');
@@ -42,6 +43,15 @@ const btnSeedDom     = $id('seedDom');
 const btnExport      = $id('exportJson');
 const btnCopyMd      = $id('copyMd');
 const btnClearLocal  = $id('clearLocal');
+const toolsRow = document.querySelector(".tools-row");
+let btnClearServer = null;
+if (toolsRow) {
+  btnClearServer = document.createElement("button");
+  btnClearServer.textContent = "Clear (server)";
+  btnClearServer.id = "clearServer";
+  btnClearServer.className = "btn";
+  toolsRow.appendChild(btnClearServer);
+}
 
 // Replay
 const fileReplay = $id('replayFile');
@@ -188,7 +198,15 @@ function updateInspector(){
   // cooldown
   const coolMs = Number(localStorage.getItem('cooldownMs') || COOL_DEFAULT);
   const left = Math.max(0, coolMs - (now - lastBotAt));
-  if (insCooldown) insCooldown.textContent = left ? `${Math.ceil(left/1000)}s` : 'ready';
+  if (insCooldown) {
+    if (cooldownOverride) {
+      insCooldown.textContent = cooldownOverride.ready
+        ? 'ready'
+        : `${Math.ceil(cooldownOverride.remaining / 1000)}s`;
+    } else {
+      insCooldown.textContent = left ? `${Math.ceil(left/1000)}s` : 'ready';
+    }
+  }
 }
 
 ////////////////////////////////////////
@@ -217,6 +235,7 @@ socket.on('disconnect', (reason) => {
 socket.on('threadInit', (msgs=[]) => {
   if (thread) thread.innerHTML = '';
   seenMessageIds.clear();
+  cooldownOverride = null;
   window.currentThread = msgs.slice();
   msgs.forEach((msg) => {
     if (msg.id) {
@@ -229,6 +248,29 @@ socket.on('threadInit', (msgs=[]) => {
 
 socket.on('newMessage', (m) => {
   upsertMessageFromServer(m);
+});
+
+// --- Cooldown Update Listener ---
+socket.on('cooldownUpdate', ({ remainingMs = 0 }) => {
+  cooldownOverride = { ready: remainingMs <= 0, remaining: remainingMs };
+  const el = document.getElementById('ins-cooldown');
+  if (!el) return;
+
+  let seconds = Math.ceil(remainingMs / 1000);
+  el.textContent = seconds > 0 ? seconds + 's' : 'ready';
+
+  if (window._cooldownTimer) clearInterval(window._cooldownTimer);
+
+  if (seconds > 0) {
+    window._cooldownTimer = setInterval(() => {
+      seconds--;
+      el.textContent = seconds > 0 ? seconds + 's' : 'ready';
+      if (seconds <= 0) {
+        clearInterval(window._cooldownTimer);
+        window._cooldownTimer = null;
+      }
+    }, 1000);
+  }
 });
 
 function setStatus(text){
@@ -390,6 +432,13 @@ btnClearLocal && btnClearLocal.addEventListener('click', ()=>{
   window.currentThread = [];
   updateInspector();
 });
+
+const clearServer = () => {
+  const ident = currentIdent();
+  socket.emit("clearSession", { sessionId: ident.sessionId });
+};
+
+btnClearServer && btnClearServer.addEventListener("click", clearServer);
 
 ////////////////////////////////////////
 /** Replay **/

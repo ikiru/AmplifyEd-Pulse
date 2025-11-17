@@ -3,6 +3,11 @@ import path from "path";
 import { fileURLToPath } from "url";
 import { updateStats, classifyContent, isDominating, detectSituation } from "./detectors.js";
 
+const DEBUG = process.env.DEBUG_PULSE === "1";
+function logDebug(...args) {
+  if (DEBUG) console.log("[debug]", ...args);
+}
+
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const promptsDir = path.resolve(__dirname, "../prompts");
 
@@ -77,6 +82,7 @@ export async function maybeIntervene({
 }) {
   // Decide if bot should speak; if yes, which move.
   const situation = detectSituation(session);
+  logDebug("maybeIntervene: situation =", situation, { sessionId });
   console.log("[sandbox] intervention check", {
     sessionId,
     situation,
@@ -93,10 +99,15 @@ export async function maybeIntervene({
 
   // Guard: avoid over-speaking (min 45s between bot messages)
   const now = Date.now();
-  if (now - session.lastBotAt < 45_000) {
+  /* PATCH: confusion intervention overrides cooldown */
+  const isConfused = situation === "confused";
+  const timeSinceLast = now - session.lastBotAt;
+  const cooldownExpired = timeSinceLast >= 45_000;
+
+  if (!isConfused && !cooldownExpired) {
     console.log("[sandbox] intervention skipped (internal throttle)", {
       sessionId,
-      sinceLastMs: now - session.lastBotAt,
+      sinceLastMs: timeSinceLast,
     });
     return null;
   }
@@ -106,9 +117,48 @@ export async function maybeIntervene({
     .join("\n\n");
   const summary = summarize(session);
 
+  // Ignore isolated agreement — only respond to bursts
+  if (session.agreeBurst && session.agreeBurst.count > 0) {
+    if (session.agreeBurst.count < 5) {
+      return null; // ignore small bursts
+    }
+
+    // Enough agreement to count as a burst
+    session.agreeBurst.count = 0; // reset
+
+    logDebug("maybeIntervene: selecting move", "agreement-burst", { sessionId });
+    return await callLLM(
+      openai,
+      model,
+      systemPrompt,
+      `System: agreement burst detected. Participants show strong consensus.
+Write 1 short sentence acknowledging the consensus and ask 1 follow-up question.`,
+      { sessionId, move: "agreement-burst" }
+    );
+  }
+
+  // Prevent multiple bot replies firing instantly after reconnects
+  if (session._justConnected) {
+    console.log("[sandbox] intervention skipped (fresh reconnect)", { sessionId });
+    session._justConnected = false;
+    return null;
+  }
+
   // Dominating check
-  if (last && isDominating(session, last.userId)) {
+  if (situation === "confused") {
+    console.log("[sandbox] intervention decision", { sessionId, move: "clarify" });
+    logDebug("maybeIntervene: selecting move", "clarify", { sessionId });
+    return await callLLM(
+      openai,
+      model,
+      systemPrompt,
+      buildInterventionPrompt("clarify", summary, recent),
+      { sessionId, move: "clarify" }
+    );
+  } else if (last && isDominating(session, last.userId)) {
+    // Skip dominance invite when confusion already detected
     console.log("[sandbox] intervention decision", { sessionId, move: "invite" });
+    logDebug("maybeIntervene: selecting move", "invite", { sessionId });
     return await callLLM(
       openai,
       model,
@@ -117,19 +167,9 @@ export async function maybeIntervene({
       { sessionId, move: "invite" }
     );
   }
-
-  if (situation === "confused") {
-    console.log("[sandbox] intervention decision", { sessionId, move: "clarify" });
-    return await callLLM(
-      openai,
-      model,
-      systemPrompt,
-      buildInterventionPrompt("clarify", summary, recent),
-      { sessionId, move: "clarify" }
-    );
-  }
   if (situation === "barrier") {
     console.log("[sandbox] intervention decision", { sessionId, move: "reframe" });
+    logDebug("maybeIntervene: selecting move", "reframe", { sessionId });
     return await callLLM(
       openai,
       model,
@@ -140,6 +180,7 @@ export async function maybeIntervene({
   }
   if (situation === "stalled") {
     console.log("[sandbox] intervention decision", { sessionId, move: "nudge" });
+    logDebug("maybeIntervene: selecting move", "nudge", { sessionId });
     return await callLLM(
       openai,
       model,

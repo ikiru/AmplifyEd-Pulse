@@ -1,5 +1,10 @@
 // Simple, tunable heuristics for "stalled", "confused", "dominating", etc.
 
+const DEBUG = process.env.DEBUG_PULSE === "1";
+function logDebug(...args) {
+  if (DEBUG) console.log("[debug]", ...args);
+}
+
 export function updateStats(session, msg) {
   const { userId, text, ts, authorType } = msg;
   if (authorType === "bot") return;
@@ -9,13 +14,34 @@ export function updateStats(session, msg) {
   s.count += 1;
   s.chars += (text || "").length;
   s.lastAt = ts;
+
+  const type = classifyContent(msg.text);
+
+  // Track agreement bursts
+  if (type === "agreement") {
+    const now = Date.now();
+    if (!session.agreeBurst) {
+      session.agreeBurst = { count: 0, lastAt: 0 };
+    }
+    const delta = now - session.agreeBurst.lastAt;
+
+    if (delta < 3000) {
+      session.agreeBurst.count += 1;
+    } else {
+      session.agreeBurst.count = 1;
+    }
+
+    session.agreeBurst.lastAt = now;
+  }
 }
 
 export function classifyContent(text) {
   const t = (text || "").trim().toLowerCase();
 
-  if (["i agree", "agree", "+1", "same", "👍"].includes(t)) return "agreement";
-  if (
+  let result = "constructive";
+  if (["i agree", "agree", "+1", "same", "👍"].includes(t)) {
+    result = "agreement";
+  } else if (
     t.includes("confus") ||
     t.includes("lost") ||
     t.includes("not sure") ||
@@ -24,11 +50,15 @@ export function classifyContent(text) {
     t.includes("what are we doing") ||
     t.endsWith("?")
   ) {
-    return "confusion";
+    result = "confusion";
+  } else if (/waste of time|nothing ever changes|this is stupid/i.test(t)) {
+    result = "venting";
+  } else if (t.length < 3) {
+    result = "other";
   }
-  if (/waste of time|nothing ever changes|this is stupid/i.test(t)) return "venting";
-  if (t.length < 3) return "other";
-  return "constructive";
+
+  logDebug("classifyContent:", { text, result });
+  return result;
 }
 
 export function isDominating(session, userId) {
@@ -36,7 +66,9 @@ export function isDominating(session, userId) {
   if (totals < 6) return false;
   const u = session.userStats[userId];
   const share = u ? u.count / totals : 0;
-  return share > 0.4; // >40% of posts
+  const dominating = share > 0.4;
+  logDebug("isDominating:", { userId, share });
+  return dominating; // >40% of posts
 }
 
 export function momentumScore(session, windowSize = 10) {
@@ -50,7 +82,8 @@ export function momentumScore(session, windowSize = 10) {
   let score = 0.5;
   if (avgLen > 60) score += 0.2;
   if (uniqUsers >= 3) score += 0.2;
-  if (agreements / msgs.length > 0.4) score -= 0.3;
+  // Agreements weaken momentum slightly but never trigger intervention
+  if (agreements / msgs.length > 0.4) score -= 0.1;
   return Math.max(0, Math.min(1, score));
 }
 
@@ -60,8 +93,15 @@ export function detectSituation(session) {
   const hasConfusion = last5.some(m => classifyContent(m.text) === "confusion");
   const hasVenting  = last5.some(m => classifyContent(m.text) === "venting");
 
-  if (hasConfusion) return "confused";
-  if (hasVenting && ms < 0.6) return "barrier";
-  if (ms < 0.4) return "stalled";
-  return "healthy";
+  let result = "healthy";
+  if (hasConfusion) {
+    result = "confused";
+  } else if (hasVenting && ms < 0.6) {
+    result = "barrier";
+  } else if (ms < 0.4) {
+    result = "stalled";
+  }
+
+  logDebug("detectSituation:", { momentum: ms, hasConfusion, hasVenting });
+  return result;
 }

@@ -11,6 +11,11 @@ import { Server } from "socket.io";
 import { OpenAI } from "openai";
 import { v4 as uuid } from "uuid";
 
+const DEBUG = process.env.DEBUG_PULSE === "1";
+function logDebug(...args) {
+  if (DEBUG) console.log("[debug]", ...args);
+}
+
 import { makeState, getSession } from "./facilitator/stateStore.js";
 import {
   onIncomingMessage,
@@ -82,10 +87,6 @@ function sanitize(name) {
 io.on("connection", (socket) => {
   console.log("[socket] connected:", socket.id);
 
-  socket.on("disconnect", (reason) => {
-    console.log("[socket] disconnected:", socket.id, reason);
-  });
-
   // Boot user into demo-1 room ONCE
   const sessionId = "demo-1";
   const s = getSession(state, sessionId);
@@ -96,6 +97,8 @@ io.on("connection", (socket) => {
 
   socket.join(sessionId);
   io.to(socket.id).emit("threadInit", s.messages);
+  // Mark session as freshly connected so first intervention is skipped
+  s._justConnected = true;
 
   // -------------------------------------------------------------------------
   // Inspector tuning
@@ -126,6 +129,19 @@ io.on("connection", (socket) => {
   });
 
   // -------------------------------------------------------------------------
+  // Clear server-side session state
+  // -------------------------------------------------------------------------
+  socket.on("clearSession", (payload = {}) => {
+    const targetId = payload.sessionId || sessionId;
+    const targetSession = getSession(state, targetId);
+    targetSession.messages = [];
+    targetSession.userStats = {};
+    targetSession.lastBotAt = 0;
+    console.log("[sandbox] clearing session memory", { sessionId: targetId });
+    io.to(targetId).emit("threadInit", []);
+  });
+
+  // -------------------------------------------------------------------------
   // Human message from UI
   // -------------------------------------------------------------------------
   socket.on("humanMessage", async (payload = {}) => {
@@ -135,7 +151,8 @@ io.on("connection", (socket) => {
         userId = "User",
         role = "teacher",
         text = "",
-        id: incomingId
+        id: incomingId,
+        authorType
       } = payload;
 
       const roleGroup = roleMap[role] || "educator";
@@ -148,6 +165,22 @@ io.on("connection", (socket) => {
 
       const trimmed = text.trim();
       if (!trimmed) return;
+      logDebug("incoming message:", { sessionId, userId, role, text: trimmed, authorType });
+
+      // Prevent message floods (safety)
+      const receivedAt = Date.now();
+      if (!session.lastMsgAt) session.lastMsgAt = 0;
+      if (receivedAt - session.lastMsgAt < 300) {
+        console.log("[sandbox] message ignored (too fast)", { sessionId });
+        return;
+      }
+      session.lastMsgAt = receivedAt;
+
+      // Bots never trigger more bot responses
+      if (authorType === "bot") {
+        session.lastBotAt = Date.now();
+        return;
+      }
 
       // Add human message
       const humanMsg = {
@@ -174,10 +207,25 @@ io.on("connection", (socket) => {
       // Cooldown check
       const now = Date.now();
       const cooldownMs = session.tuning.cooldownMs;
-      if (now - session.lastBotAt < cooldownMs) {
+
+      // Send cooldown data to frontend
+      const elapsed = now - session.lastBotAt;
+      const remaining = Math.max(0, cooldownMs - elapsed);
+
+      io.to(sessionId).emit("cooldownUpdate", {
+        sessionId,
+        cooldownMs,
+        elapsed,
+        remaining,
+        remainingMs: remaining,
+        ready: remaining <= 0,
+      });
+
+      // enforce cooldown
+      if (remaining > 0) {
         console.log("[sandbox] cooldown active, skipping AI", {
           sessionId,
-          remainingMs: cooldownMs - (now - session.lastBotAt),
+          remainingMs: remaining,
         });
         persistTranscript(sessionId, session.messages);
         return;
@@ -190,15 +238,27 @@ io.on("connection", (socket) => {
         cooldownMs,
         messages: session.messages.length,
       });
-      const reply = await maybeIntervene({
-        session,
-        sessionId,
-        roleGroup,
-        openai,
-        model: MODEL,
-        tuning: session.tuning,
-        systemOverride: session.promptOverride
-      });
+      if (session._interveneLock) {
+        console.log("[sandbox] BLOCKED — intervention lock active", { sessionId });
+        persistTranscript(sessionId, session.messages);
+        return;
+      }
+
+      session._interveneLock = true;
+      let reply;
+      try {
+        reply = await maybeIntervene({
+          session,
+          sessionId,
+          roleGroup,
+          openai,
+          model: MODEL,
+          tuning: session.tuning,
+          systemOverride: session.promptOverride
+        });
+      } finally {
+        session._interveneLock = false;
+      }
       console.log("[sandbox] intervention result", {
         sessionId,
         hasReply: Boolean(reply?.trim()),
@@ -218,10 +278,28 @@ io.on("connection", (socket) => {
         session.messages.push(botMsg);
         session.lastBotAt = botMsg.ts;
 
+        // Start cooldown countdown loop
+        const total = session.tuning.cooldownMs;
+        let remaining = total;
+
+        if (session._cooldownTimer) clearInterval(session._cooldownTimer);
+
+        session._cooldownTimer = setInterval(() => {
+          remaining -= 1000;
+          if (remaining <= 0) {
+            clearInterval(session._cooldownTimer);
+            session._cooldownTimer = null;
+            io.to(sessionId).emit("cooldownUpdate", { remainingMs: 0 });
+          } else {
+            io.to(sessionId).emit("cooldownUpdate", { remainingMs: remaining });
+          }
+        }, 1000);
+
         console.log("[sandbox] → emitting bot message", {
           sessionId,
           preview: botMsg.text.slice(0, 120),
         });
+        logDebug("outgoing bot reply:", { sessionId, text: botMsg.text });
         io.to(sessionId).emit("newMessage", botMsg);
       } else {
         console.log("[sandbox] no bot reply emitted", { sessionId });
@@ -232,6 +310,9 @@ io.on("connection", (socket) => {
     } catch (err) {
       console.warn("[sandbox] humanMessage error:", err.message);
     }
+  });
+  socket.on("disconnect", (reason) => {
+    console.log("[socket] disconnected:", socket.id, reason);
   });
 });
 

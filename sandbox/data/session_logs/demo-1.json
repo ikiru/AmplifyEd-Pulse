@@ -1,20 +1,56 @@
 [
   {
-    "id": "fabf46ec-9589-496b-8c04-7f1ba78d3b3a",
+    "id": "87113197-48cb-45e1-8581-4de4378e24a0",
     "sessionId": "demo-1",
-    "userId": "TeacherA",
+    "userId": "User1",
     "role": "teacher",
     "authorType": "human",
-    "text": "i am so confused",
-    "ts": 1763124936239
+    "text": "What are we supposed to do here?",
+    "ts": 1763179385635
   },
   {
-    "id": "4ea60423-23a8-419f-9b67-7926a6c9efda",
+    "id": "c5ff47fe-cd9f-4e5a-9f72-daab01bb9aac",
+    "sessionId": "demo-1",
+    "userId": "User3",
+    "role": "teacher",
+    "authorType": "human",
+    "text": "Can someone restate the goal?",
+    "ts": 1763179386134
+  },
+  {
+    "id": "30c6e1fc-1506-4197-a5e6-d14ab9ee5052",
     "sessionId": "demo-1",
     "userId": "AmplifyEd",
     "role": "teacher",
     "authorType": "bot",
-    "text": "It sounds like there’s some uncertainty about the purpose of our discussion. Our goal is to collaboratively explore effective classroom practices and leadership strategies. What specific aspect are you feeling most confused about right now?",
-    "ts": 1763124938613
+    "text": "It sounds like we're here to collaboratively reflect on our classroom practices and explore ways to enhance student engagement and outcomes. To move forward, what specific area of our teaching or leadership are we most interested in discussing today?",
+    "ts": 1763179388265
+  },
+  {
+    "id": "491e400f-2d26-46d2-9e7a-184212520a11",
+    "sessionId": "demo-1",
+    "userId": "User1",
+    "role": "teacher",
+    "authorType": "human",
+    "text": "I agree",
+    "ts": 1763179392717
+  },
+  {
+    "id": "639dd7fb-8aa4-458f-bb35-3274a80edd33",
+    "sessionId": "demo-1",
+    "userId": "User3",
+    "role": "teacher",
+    "authorType": "human",
+    "text": "+1",
+    "ts": 1763179393118
+  },
+  {
+    "id": "475ee49d-0cfb-4605-906d-81d1f872d9b8",
+    "sessionId": "demo-1",
+    "userId": "User5",
+    "role": "teacher",
+    "authorType": "human",
+    "text": "+1",
+    "ts": 1763179393518
   }
 ]
