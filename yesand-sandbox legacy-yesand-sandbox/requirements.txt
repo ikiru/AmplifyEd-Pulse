@@ -1,5 +1,0 @@
-aiofiles
-fastapi
-openai
-python-dotenv
-uvicorn

@@ -1,10 +1,10 @@
-const {
+import {
   updateReaction,
   removeReaction,
   computePulse,
   getReactionCount,
   getReactionBreakdown,
-} = require("../../core/pulseEngine");
+} from "../../core/pulseEngine.js";
 
 const REACTION_THROTTLE_MS = 1200;
 const reactionTimestamps = new Map();
@@ -29,7 +29,7 @@ function emitPulseState(io, sessionId) {
   io.to(sessionId).emit("pulseBreakdown", breakdown);
 }
 
-function registerPulseModule(io, sessions) {
+export function registerPulseModule(io, sessions) {
   io.on("connection", (socket) => {
     socket.on("host:createSession", () => {
       let code = generateSessionCode();
@@ -131,7 +131,7 @@ function registerPulseModule(io, sessions) {
       }
 
       const hostedSessionCode = Array.from(sessions.entries()).find(
-        ([code, value]) => value.hostSocketId === socket.id
+        ([code, value]) => value.hostSocketId === socket.id,
       );
       if (hostedSessionCode) {
         const [code, session] = hostedSessionCode;
@@ -146,7 +146,3 @@ function registerPulseModule(io, sessions) {
     });
   });
 }
-
-module.exports = {
-  registerPulseModule,
-};

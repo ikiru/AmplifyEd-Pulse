@@ -1,4 +1,3 @@
-cd sandbox
 const discussionBySession = new Map();
 const participantsBySession = new Map();
 const nextParticipantNumberBySession = new Map();
@@ -38,11 +37,6 @@ function getOrCreateSessionPosts(code) {
   return discussionBySession.get(code);
 }
 
-function getParticipantName(code, socketId) {
-  const participants = participantsBySession.get(code);
-  return participants ? participants.get(socketId) : undefined;
-}
-
 function serializePost(post) {
   return {
     id: post.id,
@@ -50,13 +44,13 @@ function serializePost(post) {
     parentId: post.parentId,
     text: post.text,
     authorType: post.authorType,
+    authorName: post.authorName,
     timestamp: post.timestamp,
     score: post.score,
-    authorName: post.authorName,
   };
 }
 
-function registerLiveDiscussion(io, sessions) {
+export function registerLiveDiscussion(io, sessions) {
   io.on("connection", (socket) => {
     socket.on("discussion:newMessage", (msg) => {
       const code = (msg.sessionCode || "").trim().toUpperCase();
@@ -66,7 +60,7 @@ function registerLiveDiscussion(io, sessions) {
       const participants = getOrCreateParticipants(code);
       const authorName = participants.get(socket.id) || assignParticipantName(code, socket.id);
 
-      const id = msg.id || Date.now().toString() + "-" + Math.random().toString(36).slice(2);
+      const id = msg.id || `${Date.now()}-${Math.random().toString(36).slice(2)}`;
       const timestamp = msg.timestamp || new Date().toISOString();
 
       const post = {
@@ -83,18 +77,7 @@ function registerLiveDiscussion(io, sessions) {
 
       posts.set(id, post);
 
-      const wirePost = {
-        id: post.id,
-        sessionCode: post.sessionCode,
-        parentId: post.parentId,
-        text: post.text,
-        authorType: post.authorType,
-        authorName: post.authorName,
-        timestamp: post.timestamp,
-        score: post.score,
-      };
-
-      io.to(code).emit("discussion:messageAdded", wirePost);
+      io.to(code).emit("discussion:messageAdded", serializePost(post));
     });
 
     socket.on("audience:joinSession", ({ code }) => {
@@ -138,10 +121,9 @@ function registerLiveDiscussion(io, sessions) {
       post.score = post.score - previous + next;
       post.votes.set(voterId, next);
 
-      const wirePost = serializePost(post);
       io.to(code).emit("discussion:scoreUpdated", {
-        id: wirePost.id,
-        score: wirePost.score,
+        id: post.id,
+        score: post.score,
       });
     });
 
@@ -154,5 +136,3 @@ function registerLiveDiscussion(io, sessions) {
     });
   });
 }
-
-module.exports = { registerLiveDiscussion };

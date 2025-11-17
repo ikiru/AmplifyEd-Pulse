@@ -1,4 +1,4 @@
-const crypto = require("crypto");
+import crypto from "crypto";
 
 const sessionsByCode = new Map();
 const sessionsById = new Map();
@@ -13,7 +13,7 @@ function generateCode(length = 6) {
   return code;
 }
 
-function createSession({ title, pdType }) {
+export function createSession({ title, pdType }) {
   const code = generateCode();
   const id = crypto.randomUUID();
   const session = {
@@ -27,12 +27,7 @@ function createSession({ title, pdType }) {
   return session;
 }
 
-function getSessionByCode(code) {
+export function getSessionByCode(code) {
   if (!code) return null;
   return sessionsByCode.get(code) || null;
 }
-
-module.exports = {
-  createSession,
-  getSessionByCode,
-};

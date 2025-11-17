@@ -1,13 +1,17 @@
 // server.js
-const path = require("path");
-const express = require("express");
-const fs = require("fs");
-const http = require("http");
-const axios = require("axios");
-const { Server } = require("socket.io");
-const { registerPulseModule } = require("./src/modules/pulse/pulse.module");
-const { registerLiveDiscussion } = require("./liveDiscussion");
-const trainerRoutes = require("./src/routes/trainer.routes");
+import path from "path";
+import { fileURLToPath } from "url";
+import express from "express";
+import fs from "fs";
+import http from "http";
+import axios from "axios";
+import { Server } from "socket.io";
+import { registerPulseModule } from "./src/modules/pulse/pulse.module.js";
+import { registerLiveDiscussion } from "./liveDiscussion.js";
+import trainerRoutes from "./src/routes/trainer.routes.js";
+
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
 
 const app = express();
 const server = http.createServer(app);
@@ -235,5 +239,3 @@ const PORT = process.env.PORT || 3000;
 server.listen(PORT, () => {
   console.log(`AmplifyEd Pulse running at http://localhost:${PORT}`);
 });
-
-

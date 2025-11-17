@@ -1,5 +1,5 @@
-const express = require("express");
-const { createSession } = require("../services/sessionService");
+import express from "express";
+import { createSession } from "../services/sessionService.js";
 
 const router = express.Router();
 
@@ -13,4 +13,4 @@ router.post("/sessions", (req, res) => {
   return res.json(session);
 });
 
-module.exports = router;
+export default router;

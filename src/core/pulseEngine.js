@@ -7,12 +7,12 @@ function ensureSession(sessionId) {
   return sessions.get(sessionId);
 }
 
-function updateReaction(sessionId, socketId, value) {
+export function updateReaction(sessionId, socketId, value) {
   if (!sessionId) return;
   ensureSession(sessionId).set(socketId, value);
 }
 
-function removeReaction(sessionId, socketId) {
+export function removeReaction(sessionId, socketId) {
   const sessionReactions = sessions.get(sessionId);
   if (!sessionReactions) return;
   sessionReactions.delete(socketId);
@@ -21,7 +21,7 @@ function removeReaction(sessionId, socketId) {
   }
 }
 
-function computePulse(sessionId) {
+export function computePulse(sessionId) {
   const sessionReactions = sessionId ? sessions.get(sessionId) : null;
   if (!sessionReactions || sessionReactions.size === 0) {
     return 0;
@@ -31,13 +31,13 @@ function computePulse(sessionId) {
   return sum / values.length;
 }
 
-function getReactionCount(sessionId) {
+export function getReactionCount(sessionId) {
   const sessionReactions = sessionId ? sessions.get(sessionId) : null;
   if (!sessionReactions) return 0;
   return sessionReactions.size;
 }
 
-function getReactionBreakdown(sessionId) {
+export function getReactionBreakdown(sessionId) {
   const sessionReactions = sessionId ? sessions.get(sessionId) : null;
   if (!sessionReactions || sessionReactions.size === 0) {
     return { positive: 0, neutral: 0, negative: 0 };
@@ -54,11 +54,3 @@ function getReactionBreakdown(sessionId) {
   }
   return breakdown;
 }
-
-module.exports = {
-  updateReaction,
-  removeReaction,
-  computePulse,
-  getReactionCount,
-  getReactionBreakdown,
-};
