@@ -1,56 +1,92 @@
 [
   {
-    "id": "87113197-48cb-45e1-8581-4de4378e24a0",
+    "id": "f209a367-8ea4-46d4-9e7e-fa1d4d4ffc14",
     "sessionId": "demo-1",
-    "userId": "User1",
+    "userId": "Teachera",
     "role": "teacher",
     "authorType": "human",
-    "text": "What are we supposed to do here?",
-    "ts": 1763179385635
+    "text": "My take 1",
+    "ts": 1763449674299
   },
   {
-    "id": "c5ff47fe-cd9f-4e5a-9f72-daab01bb9aac",
+    "id": "b619189f-0115-4c6c-8bbb-cccfe96a43c5",
     "sessionId": "demo-1",
-    "userId": "User3",
+    "userId": "Teachera",
     "role": "teacher",
     "authorType": "human",
-    "text": "Can someone restate the goal?",
-    "ts": 1763179386134
+    "text": "My take 3",
+    "ts": 1763449674738
   },
   {
-    "id": "30c6e1fc-1506-4197-a5e6-d14ab9ee5052",
+    "id": "c4633fe0-7cf9-49c9-98f8-4ee984a0b5c9",
+    "sessionId": "demo-1",
+    "userId": "Teachera",
+    "role": "teacher",
+    "authorType": "human",
+    "text": "My take 5",
+    "ts": 1763449675179
+  },
+  {
+    "id": "f8251185-fa11-4783-8cc3-8f623f21251c",
     "sessionId": "demo-1",
     "userId": "AmplifyEd",
     "role": "teacher",
     "authorType": "bot",
-    "text": "It sounds like we're here to collaboratively reflect on our classroom practices and explore ways to enhance student engagement and outcomes. To move forward, what specific area of our teaching or leadership are we most interested in discussing today?",
-    "ts": 1763179388265
+    "text": "I appreciate the insights shared so far. Let's take a moment to hear from some of our quieter voices. If anyone has a different perspective or example, please feel free to share.",
+    "ts": 1763449677171
   },
   {
-    "id": "491e400f-2d26-46d2-9e7a-184212520a11",
+    "id": "8d3b5d18-8227-4c8c-b69b-0aa47010d6dc",
     "sessionId": "demo-1",
-    "userId": "User1",
+    "userId": "Teacherb",
     "role": "teacher",
     "authorType": "human",
-    "text": "I agree",
-    "ts": 1763179392717
+    "text": "My take 1",
+    "ts": 1763449680146
   },
   {
-    "id": "639dd7fb-8aa4-458f-bb35-3274a80edd33",
+    "id": "27571d6c-f8de-4651-b380-78e3d6b3aa4a",
     "sessionId": "demo-1",
-    "userId": "User3",
+    "userId": "Teacherb",
     "role": "teacher",
     "authorType": "human",
-    "text": "+1",
-    "ts": 1763179393118
+    "text": "My take 3",
+    "ts": 1763449680588
   },
   {
-    "id": "475ee49d-0cfb-4605-906d-81d1f872d9b8",
+    "id": "8ee025e1-177a-4aba-b039-324a36501318",
     "sessionId": "demo-1",
-    "userId": "User5",
+    "userId": "Teacherb",
     "role": "teacher",
     "authorType": "human",
-    "text": "+1",
-    "ts": 1763179393518
+    "text": "My take 5",
+    "ts": 1763449681028
+  },
+  {
+    "id": "73a6c9a4-0b88-47b1-b638-b3af5df7098a",
+    "sessionId": "demo-1",
+    "userId": "Teachera",
+    "role": "teacher",
+    "authorType": "human",
+    "text": "My take 1",
+    "ts": 1763449685364
+  },
+  {
+    "id": "4bbe7979-ed8a-407e-8e7c-fdc55884fe38",
+    "sessionId": "demo-1",
+    "userId": "Teachera",
+    "role": "teacher",
+    "authorType": "human",
+    "text": "My take 3",
+    "ts": 1763449685805
+  },
+  {
+    "id": "3d58f105-9ac1-4050-b1a1-ebf212e7f304",
+    "sessionId": "demo-1",
+    "userId": "Teachera",
+    "role": "teacher",
+    "authorType": "human",
+    "text": "My take 5",
+    "ts": 1763449686245
   }
 ]

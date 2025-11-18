@@ -40,6 +40,8 @@ const openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
 const LOG_DIR = path.join(__dirname, "data", "session_logs");
 fs.mkdirSync(LOG_DIR, { recursive: true });
 
+const sleep = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
+
 // ---------------------------------------------------------------------------
 // Express + Socket.io bootstrap
 // ---------------------------------------------------------------------------
@@ -259,19 +261,43 @@ io.on("connection", (socket) => {
       } finally {
         session._interveneLock = false;
       }
+
+      const interpretation = session.lastInterpretation;
+      if (interpretation?.move && interpretation.move !== "none") {
+        console.log("[interpreter] recommending move:", interpretation.move);
+      }
+      let replyText = "";
+      let replyMeta = null;
+      let shouldReply = false;
+
+      if (typeof reply === "string") {
+        replyText = reply;
+        shouldReply = Boolean(reply?.trim());
+      } else if (reply && typeof reply === "object") {
+        replyMeta = reply.metadata || null;
+        replyText = reply.reply || "";
+        shouldReply = reply.shouldReply !== false && Boolean(replyText?.trim());
+      }
+
       console.log("[sandbox] intervention result", {
         sessionId,
-        hasReply: Boolean(reply?.trim()),
+        hasReply: shouldReply,
+        strategy: replyMeta?.strategy || "standard",
       });
 
-      if (reply?.trim()) {
+      if (replyMeta?.strategy === "stall-hybrid") {
+        console.log("[sandbox] HYBRID STALL", { sessionId, preview: replyText.slice(0, 80) });
+        await sleep(600);
+      }
+
+      if (shouldReply) {
         const botMsg = {
           id: uuid(),
           sessionId,
           userId: "AmplifyEd",
           role,
           authorType: "bot",
-          text: reply.trim(),
+          text: replyText.trim(),
           ts: Date.now()
         };
 
@@ -299,7 +325,11 @@ io.on("connection", (socket) => {
           sessionId,
           preview: botMsg.text.slice(0, 120),
         });
-        logDebug("outgoing bot reply:", { sessionId, text: botMsg.text });
+        logDebug("outgoing bot reply:", {
+          sessionId,
+          text: botMsg.text,
+          metadata: replyMeta,
+        });
         io.to(sessionId).emit("newMessage", botMsg);
       } else {
         console.log("[sandbox] no bot reply emitted", { sessionId });
