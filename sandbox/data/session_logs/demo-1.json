@@ -1,92 +1,29 @@
 [
   {
-    "id": "f209a367-8ea4-46d4-9e7e-fa1d4d4ffc14",
+    "id": "68f33b92-ac23-4f7a-80fd-69b6a92e1792",
     "sessionId": "demo-1",
     "userId": "Teachera",
     "role": "teacher",
     "authorType": "human",
-    "text": "My take 1",
-    "ts": 1763449674299
+    "text": "This is a test of the PD simulation script.",
+    "ts": 1763481162351
   },
   {
-    "id": "b619189f-0115-4c6c-8bbb-cccfe96a43c5",
+    "id": "9d669ec5-10f6-43af-8e79-ac99dd964cc8",
     "sessionId": "demo-1",
-    "userId": "Teachera",
+    "userId": "Teacherb",
     "role": "teacher",
     "authorType": "human",
-    "text": "My take 3",
-    "ts": 1763449674738
+    "text": "Adding another message to drive activity.",
+    "ts": 1763481162851
   },
   {
-    "id": "c4633fe0-7cf9-49c9-98f8-4ee984a0b5c9",
-    "sessionId": "demo-1",
-    "userId": "Teachera",
-    "role": "teacher",
-    "authorType": "human",
-    "text": "My take 5",
-    "ts": 1763449675179
-  },
-  {
-    "id": "f8251185-fa11-4783-8cc3-8f623f21251c",
+    "id": "cdfdee49-1a95-424f-b299-9fd6458e7a28",
     "sessionId": "demo-1",
     "userId": "AmplifyEd",
     "role": "teacher",
     "authorType": "bot",
-    "text": "I appreciate the insights shared so far. Let's take a moment to hear from some of our quieter voices. If anyone has a different perspective or example, please feel free to share.",
-    "ts": 1763449677171
-  },
-  {
-    "id": "8d3b5d18-8227-4c8c-b69b-0aa47010d6dc",
-    "sessionId": "demo-1",
-    "userId": "Teacherb",
-    "role": "teacher",
-    "authorType": "human",
-    "text": "My take 1",
-    "ts": 1763449680146
-  },
-  {
-    "id": "27571d6c-f8de-4651-b380-78e3d6b3aa4a",
-    "sessionId": "demo-1",
-    "userId": "Teacherb",
-    "role": "teacher",
-    "authorType": "human",
-    "text": "My take 3",
-    "ts": 1763449680588
-  },
-  {
-    "id": "8ee025e1-177a-4aba-b039-324a36501318",
-    "sessionId": "demo-1",
-    "userId": "Teacherb",
-    "role": "teacher",
-    "authorType": "human",
-    "text": "My take 5",
-    "ts": 1763449681028
-  },
-  {
-    "id": "73a6c9a4-0b88-47b1-b638-b3af5df7098a",
-    "sessionId": "demo-1",
-    "userId": "Teachera",
-    "role": "teacher",
-    "authorType": "human",
-    "text": "My take 1",
-    "ts": 1763449685364
-  },
-  {
-    "id": "4bbe7979-ed8a-407e-8e7c-fdc55884fe38",
-    "sessionId": "demo-1",
-    "userId": "Teachera",
-    "role": "teacher",
-    "authorType": "human",
-    "text": "My take 3",
-    "ts": 1763449685805
-  },
-  {
-    "id": "3d58f105-9ac1-4050-b1a1-ebf212e7f304",
-    "sessionId": "demo-1",
-    "userId": "Teachera",
-    "role": "teacher",
-    "authorType": "human",
-    "text": "My take 5",
-    "ts": 1763449686245
+    "text": "I appreciate the insights being shared. I’d love to hear from some of our quieter voices—what are your thoughts or experiences related to this topic? Your perspectives are valuable to our discussion.",
+    "ts": 1763481165523
   }
 ]

@@ -1,5 +1,5 @@
 // sandbox/facilitator/interpreter.js
-// Deterministic rule-based interpreter for AmplifyEd
+// Deterministic rule-based interpreter for AmplifyEd (Fully Patched + Cleaned)
 
 export function interpretSession(session) {
   const messages = session.messages || [];
@@ -21,73 +21,105 @@ export function interpretSession(session) {
   }
 
   const text = last.text?.toLowerCase() || "";
-  const role = last.role || "unknown";
 
+  // -----------------------------
+  // High-level metadata
+  // -----------------------------
   analysis.topic = detectTopic(messages);
   analysis.focus = detectFocus(text);
   analysis.intent = detectIntent(text);
   analysis.signals = detectSignals(messages);
 
-  // -------------------------------------------------------------------------
-  // Dominance: detect if one speaker monopolizes (includes dual-dominance)
-  // -------------------------------------------------------------------------
-  const dominance = computeDominance(messages);
-  analysis.signals.dominance = dominance;
-
-  if (dominance >= 1.0) {
-    analysis.situation = "dominance";
-    analysis.recommendedMove = "invite_quiet_voices";
-    analysis.reasoning.push("Detected dominance by two speakers.");
-  }
-
-  // -------------------------------------------------------------------------
-  // ===== PATCH 3D-B: Dual-Dominance Sliding Window Detection =====
-  // This catches A+B ping-pong dominance even when computeDominance()
-  // does not yet cross the 0.70 threshold.
-  // -------------------------------------------------------------------------
-  const dual = detectDualDominance(messages, 20);
-
-  if (
-    dominance < 1.0 &&                         // don’t double-trigger
-    dual &&
-    dual.combinedShare > 0.65 &&               // 65% two-person dominance
-    messages.length > 10 &&                    // ignore early-phase noise
-    analysis.situation === "normal"            // only trigger during healthy flow
-  ) {
-    analysis.situation = "dominance";
-    analysis.recommendedMove = "invite_quiet_voices";
-    analysis.reasoning.push(
-      `Detected rising dual-dominance by ${dual.topA.user} & ${dual.topB.user}.`
-    );
-  }
-  // -------------------------------------------------------------------------
-
-
-  // Stall detection: no progress for 3+ messages
+  // ============================================================
+  // 1. STALL DETECTION (Top Priority)
+  // ============================================================
   const stall = detectStall(messages);
   analysis.signals.stall = stall;
 
   if (stall) {
     analysis.situation = "stall";
     analysis.recommendedMove = "clarify";
-    analysis.reasoning.push("Conversation appears stalled or looping.");
+    analysis.reasoning.push("Conversation appears stalled — stall overrides everything.");
+    return analysis;
   }
 
-  // Confusion detection
-  if (text.includes("i’m confused") ||
-      text.includes("what are we supposed") ||
-      text.includes("what’s the goal") ||
-      text.includes("i’m lost")) {
+  // ============================================================
+  // 2. CONFUSION DETECTION
+  // ============================================================
+  if (
+    text.includes("i’m confused") ||
+    text.includes("im confused") ||
+    text.includes("what are we supposed") ||
+    text.includes("what’s the goal") ||
+    text.includes("whats the goal") ||
+    text.includes("i’m lost") ||
+    text.includes("im lost")
+  ) {
     analysis.situation = "confusion";
     analysis.recommendedMove = "clarify";
-    analysis.reasoning.push("Detected confusion in last message.");
+    analysis.reasoning.push("Detected confusion — clarify overrides dominance.");
+    return analysis;
   }
 
+  // ============================================================
+  // 3. BARRIER / FRUSTRATION DETECTION
+  // ============================================================
+  if (
+    text.includes("this is frustrating") ||
+    text.includes("i’m frustrated") ||
+    text.includes("im frustrated") ||
+    text.includes("this isn’t working") ||
+    text.includes("this isnt working")
+  ) {
+    analysis.situation = "barrier";
+    analysis.recommendedMove = "reframe";
+    analysis.reasoning.push("Detected frustration barrier — reframe overrides dominance.");
+    return analysis;
+  }
+
+  // ============================================================
+  // 4. SUMMARIZE MOMENTS (wrap-up or planning)
+  // ============================================================
+  if (looksLikeSummarizeMoment(messages)) {
+    analysis.situation = "summary";
+    analysis.recommendedMove = "summarize";
+    analysis.reasoning.push("Detected summarize moment based on reflective/planning signals.");
+    return analysis;
+  }
+
+  // ============================================================
+  // 5. DOMINANCE DETECTION (lowest priority)
+  // ============================================================
+  const dominance = computeDominance(messages);
+  const dual = detectDualDominance(messages, 16);
+
+  analysis.signals.dominance = dominance;
+
+  const dominanceTriggered =
+    dominance >= 1.0 ||
+    (dual &&
+      dual.combinedShare > 0.72 &&
+      messages.length > 14);
+
+  if (dominanceTriggered) {
+    analysis.situation = "dominance";
+    analysis.recommendedMove = "invite_quiet_voices";
+    analysis.reasoning.push(
+      "Detected high-confidence dominance after eliminating stall, confusion, barrier, and summarize."
+    );
+    return analysis;
+  }
+
+  // ============================================================
+  // 6. NORMAL FLOW
+  // ============================================================
+  analysis.reasoning.push("No intervention signals detected.");
   return analysis;
 }
 
-
-// ---------------- Helpers ----------------
+// ===========================================================================
+// Helper Functions
+// ===========================================================================
 
 function detectTopic(messages) {
   for (let m of messages.slice().reverse()) {
@@ -124,9 +156,9 @@ function detectSignals(messages) {
 }
 
 // ---------------------------------------------------------------------------
-// PATCH 3D-B Helper: Sliding-window dual-dominance
+// DUAL-DOMINANCE (stronger, more conservative)
 // ---------------------------------------------------------------------------
-function detectDualDominance(messages, windowSize = 20) {
+function detectDualDominance(messages, windowSize = 16) {
   const recent = messages.slice(-windowSize);
   const counts = {};
 
@@ -147,9 +179,8 @@ function detectDualDominance(messages, windowSize = 20) {
   };
 }
 
-
 // ---------------------------------------------------------------------------
-// Dominance Detection (existing)
+// DOMINANCE (requires overwhelming, sustained dominance)
 // ---------------------------------------------------------------------------
 function computeDominance(messages) {
   const total = messages.length;
@@ -163,22 +194,61 @@ function computeDominance(messages) {
   const top1 = sorted[0] || 0;
   const top2 = sorted[1] || 0;
 
-  const top1Share = total > 0 ? top1 / total : 0;
   const combinedShare = total > 0 ? (top1 + top2) / total : 0;
 
-  let dominance = 0;
-
-  if (combinedShare >= 0.70 && total >= 8) {
-    dominance = 1.0;
-  } else {
-    dominance = top1Share;
+  if (combinedShare >= 0.75 && total >= 12) {
+    return 1.0; // "definitely dominance"
   }
 
-  return dominance;
+  return top1 / total;
 }
 
+// ---------------------------------------------------------------------------
+// STALL DETECTION (circular language or exact repeats)
+// ---------------------------------------------------------------------------
 function detectStall(messages) {
   if (messages.length < 4) return false;
   const last4 = messages.slice(-4).map(m => m.text?.toLowerCase() || "");
-  return last4.every(t => t === last4[0]);
+
+  const allSame = last4.every(t => t === last4[0]);
+  if (allSame) return true;
+
+  const patterns = ["i guess", "i don't know", "not sure", "idk"];
+  return patterns.every(pat => last4.some(t => t.includes(pat)));
+}
+
+// ---------------------------------------------------------------------------
+// SUMMARIZE MOMENTS (reflective or strategy-finalizing)
+// ---------------------------------------------------------------------------
+function looksLikeSummarizeMoment(messages) {
+  if (messages.length < 3) return false;
+
+  const last3 = messages.slice(-3).map(m => m.text?.toLowerCase() || "");
+
+  // Reflective summary signals
+  const reflectiveWords = ["so far", "sounds like", "it seems", "overall", "to sum up"];
+  const reflectiveHits = last3.filter(msg =>
+    reflectiveWords.some(w => msg.includes(w))
+  ).length;
+
+  if (reflectiveHits >= 2) return true;
+
+  // Planning / next-step signals
+  const planningWords = [
+    "should we pick",
+    "which one",
+    "should we choose",
+    "what strategy",
+    "which strategy",
+    "next step",
+    "so what do we do",
+    "should we try",
+    "what should we try"
+  ];
+
+  const planningHits = last3.filter(msg =>
+    planningWords.some(w => msg.includes(w))
+  ).length;
+
+  return planningHits >= 1;
 }

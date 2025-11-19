@@ -5,6 +5,36 @@ function logDebug(...args) {
   if (DEBUG) console.log("[debug]", ...args);
 }
 
+const AGREEMENT_PHRASES = new Set(["i agree", "agree", "+1", "same", "👍"]);
+const QUESTION_WORDS = ["what", "how", "why", "where", "who"];
+const CONFUSION_PATTERNS = [
+  /confus/,
+  /lost/,
+  /not sure/,
+  /dont know/,
+  /don't know/,
+  /dont understand/,
+  /don't understand/,
+  /what are we doing/,
+  /what are we focusing/,
+  /what is the goal/,
+  /what's the goal/,
+  /purpose/
+];
+const VENTING_PATTERNS = [
+  /waste of time/i,
+  /nothing ever changes/i,
+  /never actually/i,
+  /never get practical/i,
+  /checkbox pd/i,
+  /this always happens/i,
+  /doesn['’]?t even/i,
+  /doesn['’]?t work/i,
+  /didn['’]?t change/i,
+  /not helpful/i,
+  /tired of/i
+];
+
 export function updateStats(session, msg) {
   const { userId, text, ts, authorType } = msg;
   if (authorType === "bot") return;
@@ -36,25 +66,26 @@ export function updateStats(session, msg) {
 }
 
 export function classifyContent(text) {
-  const t = (text || "").trim().toLowerCase();
+  const raw = (text || "").trim();
+  const t = raw.toLowerCase();
 
   let result = "constructive";
-  if (["i agree", "agree", "+1", "same", "👍"].includes(t)) {
+  if (AGREEMENT_PHRASES.has(t)) {
     result = "agreement";
-  } else if (
-    t.includes("confus") ||
-    t.includes("lost") ||
-    t.includes("not sure") ||
-    t.includes("i don’t understand") ||
-    t.includes("i don't understand") ||
-    t.includes("what are we doing") ||
-    t.endsWith("?")
-  ) {
+  } else if (CONFUSION_PATTERNS.some((pat) => pat.test(t))) {
     result = "confusion";
-  } else if (/waste of time|nothing ever changes|this is stupid/i.test(t)) {
-    result = "venting";
-  } else if (t.length < 3) {
-    result = "other";
+  } else {
+    const hasQuestionMark = t.includes("?");
+    const hasQuestionWord = QUESTION_WORDS.some((word) =>
+      t.startsWith(word + " ") || t.includes(` ${word} `)
+    );
+    if (hasQuestionMark && hasQuestionWord) {
+      result = "confusion";
+    } else if (VENTING_PATTERNS.some((pat) => pat.test(raw))) {
+      result = "venting";
+    } else if (t.length < 3) {
+      result = "other";
+    }
   }
 
   logDebug("classifyContent:", { text, result });
@@ -89,19 +120,55 @@ export function momentumScore(session, windowSize = 10) {
 
 export function detectSituation(session) {
   const ms = momentumScore(session);
-  const last5 = session.messages.slice(-5);
-  const hasConfusion = last5.some(m => classifyContent(m.text) === "confusion");
-  const hasVenting  = last5.some(m => classifyContent(m.text) === "venting");
+  const recent = session.messages
+    .filter((m) => m.authorType !== "bot")
+    .slice(-6);
+
+  const tags = recent.map((m) => classifyContent(m.text));
+  const confusionCount = tags.filter((t) => t === "confusion").length;
+  const ventingWindow = recent.slice(-4);
+  const ventingCount = ventingWindow
+    .map((m) => classifyContent(m.text))
+    .filter((t) => t === "venting").length;
+  const lowEngagement = hasLowEngagementWindow(recent);
 
   let result = "healthy";
-  if (hasConfusion) {
+  if (confusionCount > 0) {
     result = "confused";
-  } else if (hasVenting && ms < 0.6) {
-    result = "barrier";
-  } else if (ms < 0.4) {
+  } else if (ventingCount >= 2) {
+    result = "topic_drift";
+  } else if (lowEngagement) {
+    result = "low_engagement";
+  } else if (ms < 0.35) {
     result = "stalled";
   }
 
-  logDebug("detectSituation:", { momentum: ms, hasConfusion, hasVenting });
+  logDebug("detectSituation:", {
+    momentum: ms,
+    confusionCount,
+    ventingCount,
+    lowEngagement,
+  });
   return result;
+}
+
+function hasLowEngagementWindow(recent = []) {
+  if (recent.length < 3) return false;
+  const lastThree = recent.slice(-3);
+  const [lead, ...followers] = lastThree;
+  if (!lead) return false;
+
+  const leadLen = (lead.text || "").length;
+  const longLead = leadLen >= 70;
+  if (!longLead) return false;
+
+  const shortFollowers = followers.every(
+    (msg) => (msg.text || "").length > 0 && (msg.text || "").length <= 45
+  );
+  const uniqueVoices = new Set(lastThree.map((m) => m.userId)).size;
+  const followersDifferFromLead = followers.every(
+    (msg) => msg.userId && msg.userId !== lead.userId
+  );
+
+  return shortFollowers && uniqueVoices >= 2 && followersDifferFromLead;
 }
