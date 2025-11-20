@@ -1,29 +1,26 @@
 [
   {
-    "id": "68f33b92-ac23-4f7a-80fd-69b6a92e1792",
-    "sessionId": "demo-1",
-    "userId": "Teachera",
-    "role": "teacher",
-    "authorType": "human",
-    "text": "This is a test of the PD simulation script.",
-    "ts": 1763481162351
+    "id": "2feb89e0-6ac2-4ed4-8cdd-b389bc3247f7",
+    "sender": "user",
+    "text": "test",
+    "ts": 1763586480229
   },
   {
-    "id": "9d669ec5-10f6-43af-8e79-ac99dd964cc8",
+    "id": "5732e859-ae92-4c49-81b7-a61a9c5fca76",
     "sessionId": "demo-1",
-    "userId": "Teacherb",
+    "userId": "User",
     "role": "teacher",
     "authorType": "human",
-    "text": "Adding another message to drive activity.",
-    "ts": 1763481162851
+    "text": "test 2",
+    "ts": 1763616249443
   },
   {
-    "id": "cdfdee49-1a95-424f-b299-9fd6458e7a28",
+    "id": "961b0956-c34f-41bc-9ac7-8310f0f09d76",
     "sessionId": "demo-1",
-    "userId": "AmplifyEd",
+    "userId": "User",
     "role": "teacher",
-    "authorType": "bot",
-    "text": "I appreciate the insights being shared. I’d love to hear from some of our quieter voices—what are your thoughts or experiences related to this topic? Your perspectives are valuable to our discussion.",
-    "ts": 1763481165523
+    "authorType": "human",
+    "text": "test",
+    "ts": 1763617092736
   }
 ]

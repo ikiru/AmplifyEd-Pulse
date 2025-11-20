@@ -1,174 +1,209 @@
-// Simple, tunable heuristics for "stalled", "confused", "dominating", etc.
-
-const DEBUG = process.env.DEBUG_PULSE === "1";
-function logDebug(...args) {
-  if (DEBUG) console.log("[debug]", ...args);
-}
+// Lightweight helper module that keeps the interpreter as the primary source of truth.
+// Provides basic classification + situation detectors for fallback behavior.
 
 const AGREEMENT_PHRASES = new Set(["i agree", "agree", "+1", "same", "👍"]);
-const QUESTION_WORDS = ["what", "how", "why", "where", "who"];
-const CONFUSION_PATTERNS = [
-  /confus/,
-  /lost/,
-  /not sure/,
-  /dont know/,
-  /don't know/,
-  /dont understand/,
-  /don't understand/,
-  /what are we doing/,
-  /what are we focusing/,
-  /what is the goal/,
-  /what's the goal/,
-  /purpose/
-];
 const VENTING_PATTERNS = [
   /waste of time/i,
   /nothing ever changes/i,
+  /this is stupid/i,
   /never actually/i,
-  /never get practical/i,
   /checkbox pd/i,
-  /this always happens/i,
-  /doesn['’]?t even/i,
   /doesn['’]?t work/i,
-  /didn['’]?t change/i,
   /not helpful/i,
-  /tired of/i
+  /never changes/i,
+  /doesn['’]?t fit/i,
 ];
 
-export function updateStats(session, msg) {
-  const { userId, text, ts, authorType } = msg;
-  if (authorType === "bot") return;
+const CONFUSION_KEYWORDS = [
+  "what are we actually focusing",
+  "not sure what the goal",
+  "i'm lost",
+  "im lost",
+  "i don't understand",
+  "i dont understand",
+  "i'm confused",
+  "im confused",
+  "what do you mean",
+  "what are we doing",
+  "what is the goal",
+  "why are we doing this",
+  "how do we",
+];
+const BARRIER_KEYWORDS = [
+  "never actually",
+  "waste of time",
+  "this always happens",
+  "that's wrong",
+  "that is wrong",
+  "not accurate",
+  "i disagree",
+  "didn't change",
+  "didnt change",
+  "doesn't change",
+  "doesnt change",
+  "doesn't fit",
+  "doesnt fit",
+];
+const SUMMARY_KEYWORDS = [
+  "should we pick",
+  "which strategy",
+  "next step",
+  "what strategy",
+  "now what",
+  "recap",
+  "summary",
+  "to sum up",
+];
+const DOMINANCE_KEYWORDS = [
+  "let me tell you",
+  "let me be honest",
+  "let me explain",
+  "like i told you",
+  "as i already said",
+  "listen",
+  "obviously",
+];
 
-  if (!session.userStats[userId]) session.userStats[userId] = { count: 0, chars: 0, lastAt: 0 };
-  const s = session.userStats[userId];
-  s.count += 1;
-  s.chars += (text || "").length;
-  s.lastAt = ts;
-
-  const type = classifyContent(msg.text);
-
-  // Track agreement bursts
-  if (type === "agreement") {
-    const now = Date.now();
-    if (!session.agreeBurst) {
-      session.agreeBurst = { count: 0, lastAt: 0 };
-    }
-    const delta = now - session.agreeBurst.lastAt;
-
-    if (delta < 3000) {
-      session.agreeBurst.count += 1;
-    } else {
-      session.agreeBurst.count = 1;
-    }
-
-    session.agreeBurst.lastAt = now;
-  }
+function normalizeText(text = "") {
+  return text
+    .toLowerCase()
+    .replace(/’/g, "'")
+    .replace(/—/g, " ")
+    .trim();
 }
 
-export function classifyContent(text) {
-  const raw = (text || "").trim();
-  const t = raw.toLowerCase();
+function matchesAny(text = "", keywords = []) {
+  const normalized = normalizeText(text);
+  return keywords.some((keyword) => normalized.includes(keyword));
+}
 
-  let result = "constructive";
-  if (AGREEMENT_PHRASES.has(t)) {
-    result = "agreement";
-  } else if (CONFUSION_PATTERNS.some((pat) => pat.test(t))) {
-    result = "confusion";
-  } else {
-    const hasQuestionMark = t.includes("?");
-    const hasQuestionWord = QUESTION_WORDS.some((word) =>
-      t.startsWith(word + " ") || t.includes(` ${word} `)
-    );
-    if (hasQuestionMark && hasQuestionWord) {
-      result = "confusion";
-    } else if (VENTING_PATTERNS.some((pat) => pat.test(raw))) {
-      result = "venting";
-    } else if (t.length < 3) {
-      result = "other";
-    }
+// ------------------------------------------------------
+// updateStats — simple pulse-tracking data
+// ------------------------------------------------------
+export function updateStats(stats, newPulse) {
+  if (!stats) {
+    return {
+      pulses: [newPulse],
+      avg: newPulse,
+      last: newPulse,
+    };
   }
 
-  logDebug("classifyContent:", { text, result });
-  return result;
+  const updated = {
+    pulses: [...stats.pulses, newPulse],
+    last: newPulse,
+    avg:
+      (stats.avg * (stats.pulses.length - 1) + newPulse) /
+      stats.pulses.length,
+  };
+
+  return updated;
+}
+
+// ------------------------------------------------------
+// classifyContent — compatibility with existing tests/UX
+// ------------------------------------------------------
+export function classifyContent(text) {
+  if (!text || typeof text !== "string") return "constructive";
+
+  const normalized = normalizeText(text);
+
+  if (AGREEMENT_PHRASES.has(normalized)) {
+    return "agreement";
+  }
+
+  if (matchesAny(normalized, CONFUSION_KEYWORDS) || normalized.endsWith("?")) {
+    return "confusion";
+  }
+
+  if (VENTING_PATTERNS.some((pat) => pat.test(text))) {
+    return "venting";
+  }
+
+  if (normalized.length < 3) {
+    return "other";
+  }
+
+  return "constructive";
 }
 
 export function isDominating(session, userId) {
-  const totals = Object.values(session.userStats).reduce((acc, s) => acc + s.count, 0);
+  if (!session?.userStats) return false;
+  const totals = Object.values(session.userStats).reduce((acc, s) => acc + (s.count || 0), 0);
   if (totals < 6) return false;
-  const u = session.userStats[userId];
-  const share = u ? u.count / totals : 0;
-  const dominating = share > 0.4;
-  logDebug("isDominating:", { userId, share });
-  return dominating; // >40% of posts
+  const user = session.userStats[userId];
+  const share = user ? user.count / totals : 0;
+  return share > 0.4;
 }
 
 export function momentumScore(session, windowSize = 10) {
-  // Look at last N messages for variety & length; very rough starter metric.
-  const msgs = session.messages.slice(-windowSize);
+  const msgs = session?.messages?.slice(-windowSize) || [];
   if (msgs.length < 3) return 0.5;
-  const avgLen = msgs.reduce((a, m) => a + (m.text?.length || 0), 0) / msgs.length;
-  const uniqUsers = new Set(msgs.filter(m => m.authorType !== "bot").map(m => m.userId)).size;
-  const agreements = msgs.filter(m => classifyContent(m.text) === "agreement").length;
+  const avgLen =
+    msgs.reduce((acc, msg) => acc + (msg.text?.length || 0), 0) / msgs.length;
+  const uniqUsers = new Set(msgs.filter((m) => m.authorType !== "bot").map((m) => m.userId)).size;
+  const agreements = msgs.filter((msg) => classifyContent(msg.text) === "agreement").length;
 
   let score = 0.5;
   if (avgLen > 60) score += 0.2;
   if (uniqUsers >= 3) score += 0.2;
-  // Agreements weaken momentum slightly but never trigger intervention
   if (agreements / msgs.length > 0.4) score -= 0.1;
   return Math.max(0, Math.min(1, score));
 }
 
-export function detectSituation(session) {
-  const ms = momentumScore(session);
-  const recent = session.messages
-    .filter((m) => m.authorType !== "bot")
-    .slice(-6);
+// ------------------------------------------------------
+// detectSituation — fallback heuristics (normalized outputs only)
+// ------------------------------------------------------
+export function detectSituation(input) {
+  if (!input) return "normal";
 
-  const tags = recent.map((m) => classifyContent(m.text));
-  const confusionCount = tags.filter((t) => t === "confusion").length;
-  const ventingWindow = recent.slice(-4);
-  const ventingCount = ventingWindow
-    .map((m) => classifyContent(m.text))
-    .filter((t) => t === "venting").length;
-  const lowEngagement = hasLowEngagementWindow(recent);
+  let text = "";
+  let session = null;
 
-  let result = "healthy";
-  if (confusionCount > 0) {
-    result = "confused";
-  } else if (ventingCount >= 2) {
-    result = "topic_drift";
-  } else if (lowEngagement) {
-    result = "low_engagement";
-  } else if (ms < 0.35) {
-    result = "stalled";
+  if (typeof input === "string") {
+    text = input;
+  } else {
+    session = input;
+    const human = (session.messages || []).filter((msg) => msg.authorType !== "bot");
+    const last = human[human.length - 1];
+    text = last?.text || "";
   }
 
-  logDebug("detectSituation:", {
-    momentum: ms,
-    confusionCount,
-    ventingCount,
-    lowEngagement,
-  });
-  return result;
-}
+  const normalized = normalizeText(text);
+  if (!normalized) return "normal";
 
-function hasLowEngagementWindow(recent = []) {
-  if (recent.length < 3) return false;
-  const lastThree = recent.slice(-3);
-  const [lead, ...followers] = lastThree;
-  if (!lead) return false;
+  if (matchesAny(normalized, CONFUSION_KEYWORDS)) {
+    return "confusion";
+  }
 
-  const leadLen = (lead.text || "").length;
-  const longLead = leadLen >= 70;
-  if (!longLead) return false;
+  if (matchesAny(normalized, BARRIER_KEYWORDS)) {
+    return "barrier";
+  }
 
-  const shortFollowers = followers.every(
-    (msg) => (msg.text || "").length > 0 && (msg.text || "").length <= 45
-  );
-  const uniqueVoices = new Set(lastThree.map((m) => m.userId)).size;
-  const followersDifferFromLead = followers.every(
-    (msg) => msg.userId && msg.userId !== lead.userId
-  );
+  if (matchesAny(normalized, DOMINANCE_KEYWORDS) && normalized.length > 0) {
+    return "dominance";
+  }
 
-  return shortFollowers && uniqueVoices >= 2 && followersDifferFromLead;
+  if (session && session.lastInterpretation?.signals?.dominance === 1) {
+    return "dominance";
+  }
+
+  if (session) {
+    const humanMessages = (session.messages || []).filter((msg) => msg.authorType !== "bot");
+    const dominantUser = humanMessages[humanMessages.length - 1]?.userId;
+    if (dominantUser && isDominating(session, dominantUser)) {
+      return "dominance";
+    }
+  }
+
+  if (matchesAny(normalized, SUMMARY_KEYWORDS)) {
+    return "summary";
+  }
+
+  const momentum = session ? momentumScore(session) : null;
+  if (momentum !== null && momentum < 0.4) {
+    return "stalled";
+  }
+
+  return "normal";
 }
