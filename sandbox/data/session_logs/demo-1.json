@@ -1,56 +1,11 @@
 [
   {
-    "id": "0aa786aa-4ea8-4a7d-ac94-31f1bcaf2569",
+    "id": "b6fd423a-2e58-44b8-9158-7b4c5fdd1f30",
     "sessionId": "demo-1",
     "userId": "User",
     "role": "teacher",
     "authorType": "human",
     "text": "hello",
-    "ts": 1763857589095
-  },
-  {
-    "id": "3bf1e3cc-4e3f-49be-b7c9-69f4d9c65db6",
-    "sessionId": "demo-1",
-    "userId": "User",
-    "role": "teacher",
-    "authorType": "human",
-    "text": "I am lost",
-    "ts": 1763857595645
-  },
-  {
-    "id": "6f0c36cd-68ef-42dd-a2a7-a46a24c2da89",
-    "sessionId": "demo-1",
-    "userId": "User",
-    "role": "teacher",
-    "authorType": "human",
-    "text": "I am lost",
-    "ts": 1763857841674
-  },
-  {
-    "id": "1c38062c-c364-40fe-9349-ec81eec371e3",
-    "sessionId": "demo-1",
-    "userId": "User",
-    "role": "teacher",
-    "authorType": "human",
-    "text": "I am lost",
-    "ts": 1763858401202
-  },
-  {
-    "id": "55ad6b6b-24bc-4d3e-a485-62c56c9e13c0",
-    "sessionId": "demo-1",
-    "userId": "User",
-    "role": "teacher",
-    "authorType": "human",
-    "text": "i'm lost",
-    "ts": 1763858892697
-  },
-  {
-    "id": "0bf936d6-72ea-43d8-9b2c-0f80fea412b5",
-    "sessionId": "demo-1",
-    "userId": "User",
-    "role": "teacher",
-    "authorType": "human",
-    "text": "I am lost",
-    "ts": 1763859526754
+    "ts": 1763925026077
   }
 ]
