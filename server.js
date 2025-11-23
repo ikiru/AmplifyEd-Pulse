@@ -9,6 +9,7 @@ import { Server } from "socket.io";
 import { registerPulseModule } from "./src/modules/pulse/pulse.module.js";
 import { registerLiveDiscussion } from "./liveDiscussion.js";
 import trainerRoutes from "./src/routes/trainer.routes.js";
+import { startInterpreter } from "./ai/interpreter/index.js";
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -25,6 +26,20 @@ const SESSION_CODE_LENGTH = 6;
 // Maps sessionCode -> { code, createdAt, stageSocketId }
 const activeSessions = new Map();
 const sessions = new Map();
+
+const pulseStore = {
+  recentValues: [],
+  averages: { avg1s: 0, avg5s: 0, avg30s: 0 },
+  trend: "flat",
+  velocity: 0,
+  engagement: { activeUsers: 0, dropOffRate: 0, participation: 0 },
+};
+
+const commentStore = {
+  messages: [],
+  sentiment: 0,
+  dominantTheme: "",
+};
 
 function generateSessionCode() {
   let result = "";
@@ -233,6 +248,8 @@ io.on("connection", (socket) => {
     console.log("Client disconnected:", socket.id);
   });
 });
+
+startInterpreter(io, pulseStore, commentStore);
 
 // ----------- Start server -----------
 const PORT = process.env.PORT || 3000;

@@ -190,7 +190,7 @@ async function initStage() {
 // log socket lifecycle
   console.log("[Stage] Socket connecting...");
   socket.on("connect", () => {
-    console.log("[Stage] Connected as", socket.id, "– requesting session code…");
+    console.log("[Stage] Connected as", socket.id, "- requesting session code…");
     socket.emit("registerRole", "stage");
     socket.emit("stage:requestSession");
   });
@@ -208,7 +208,7 @@ async function initStage() {
     currentSessionCode = payload.code;
     updateSessionCodeUI(currentSessionCode);
     renderSessionQr(currentSessionCode);
-    debugBar.textContent = `Session ready — code ${currentSessionCode}`;
+    debugBar.textContent = `Session ready - code ${currentSessionCode}`;
   });
 
   const participantCountEl = document.getElementById("stage-participantcount") || document.getElementById("stage-participant-count");
@@ -220,7 +220,7 @@ async function initStage() {
   socket.on("host:participantLeft", ({ count }) => updateParticipantCount(count));
   socket.on("participantCount", ({ count }) => updateParticipantCount(count));
   socket.on("session:ended", () => {
-    debugBar.textContent = "Session ended — refresh to start a new one.";
+    debugBar.textContent = "Session ended - refresh to start a new one.";
   });
 
   const stageDiscussionFeed = document.getElementById("stage-discussion-feed");

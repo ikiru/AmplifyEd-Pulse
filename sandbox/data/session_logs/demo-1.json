@@ -1,92 +1,56 @@
 [
   {
-    "id": "f209a367-8ea4-46d4-9e7e-fa1d4d4ffc14",
+    "id": "0aa786aa-4ea8-4a7d-ac94-31f1bcaf2569",
     "sessionId": "demo-1",
-    "userId": "Teachera",
+    "userId": "User",
     "role": "teacher",
     "authorType": "human",
-    "text": "My take 1",
-    "ts": 1763449674299
+    "text": "hello",
+    "ts": 1763857589095
   },
   {
-    "id": "b619189f-0115-4c6c-8bbb-cccfe96a43c5",
+    "id": "3bf1e3cc-4e3f-49be-b7c9-69f4d9c65db6",
     "sessionId": "demo-1",
-    "userId": "Teachera",
+    "userId": "User",
     "role": "teacher",
     "authorType": "human",
-    "text": "My take 3",
-    "ts": 1763449674738
+    "text": "I am lost",
+    "ts": 1763857595645
   },
   {
-    "id": "c4633fe0-7cf9-49c9-98f8-4ee984a0b5c9",
+    "id": "6f0c36cd-68ef-42dd-a2a7-a46a24c2da89",
     "sessionId": "demo-1",
-    "userId": "Teachera",
+    "userId": "User",
     "role": "teacher",
     "authorType": "human",
-    "text": "My take 5",
-    "ts": 1763449675179
+    "text": "I am lost",
+    "ts": 1763857841674
   },
   {
-    "id": "f8251185-fa11-4783-8cc3-8f623f21251c",
+    "id": "1c38062c-c364-40fe-9349-ec81eec371e3",
     "sessionId": "demo-1",
-    "userId": "AmplifyEd",
-    "role": "teacher",
-    "authorType": "bot",
-    "text": "I appreciate the insights shared so far. Let's take a moment to hear from some of our quieter voices. If anyone has a different perspective or example, please feel free to share.",
-    "ts": 1763449677171
-  },
-  {
-    "id": "8d3b5d18-8227-4c8c-b69b-0aa47010d6dc",
-    "sessionId": "demo-1",
-    "userId": "Teacherb",
+    "userId": "User",
     "role": "teacher",
     "authorType": "human",
-    "text": "My take 1",
-    "ts": 1763449680146
+    "text": "I am lost",
+    "ts": 1763858401202
   },
   {
-    "id": "27571d6c-f8de-4651-b380-78e3d6b3aa4a",
+    "id": "55ad6b6b-24bc-4d3e-a485-62c56c9e13c0",
     "sessionId": "demo-1",
-    "userId": "Teacherb",
+    "userId": "User",
     "role": "teacher",
     "authorType": "human",
-    "text": "My take 3",
-    "ts": 1763449680588
+    "text": "i'm lost",
+    "ts": 1763858892697
   },
   {
-    "id": "8ee025e1-177a-4aba-b039-324a36501318",
+    "id": "0bf936d6-72ea-43d8-9b2c-0f80fea412b5",
     "sessionId": "demo-1",
-    "userId": "Teacherb",
+    "userId": "User",
     "role": "teacher",
     "authorType": "human",
-    "text": "My take 5",
-    "ts": 1763449681028
-  },
-  {
-    "id": "73a6c9a4-0b88-47b1-b638-b3af5df7098a",
-    "sessionId": "demo-1",
-    "userId": "Teachera",
-    "role": "teacher",
-    "authorType": "human",
-    "text": "My take 1",
-    "ts": 1763449685364
-  },
-  {
-    "id": "4bbe7979-ed8a-407e-8e7c-fdc55884fe38",
-    "sessionId": "demo-1",
-    "userId": "Teachera",
-    "role": "teacher",
-    "authorType": "human",
-    "text": "My take 3",
-    "ts": 1763449685805
-  },
-  {
-    "id": "3d58f105-9ac1-4050-b1a1-ebf212e7f304",
-    "sessionId": "demo-1",
-    "userId": "Teachera",
-    "role": "teacher",
-    "authorType": "human",
-    "text": "My take 5",
-    "ts": 1763449686245
+    "text": "I am lost",
+    "ts": 1763859526754
   }
 ]

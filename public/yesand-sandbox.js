@@ -282,7 +282,7 @@ async function submitFeedback(rating, revision = "") {
       throw new Error("Unable to save feedback right now.");
     }
 
-    feedbackStatus.textContent = "Feedback recorded — thank you.";
+    feedbackStatus.textContent = "Feedback recorded - thank you.";
     feedbackLogged = true;
     rewritePanel.classList.add("hidden");
     trainerImprovement.value = "";

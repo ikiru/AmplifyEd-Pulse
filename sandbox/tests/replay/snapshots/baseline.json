@@ -1,0 +1,10 @@
+{
+  "name": "Baseline Behavior Test",
+  "steps": [
+    { "type": "say", "user": "A", "text": "I'm confused about the directions." },
+    { "type": "expect", "move": "clarify" },
+
+    { "type": "say", "user": "B", "text": "Yeah I'm not sure either." },
+    { "type": "expect", "move": "clarify" }
+  ]
+}

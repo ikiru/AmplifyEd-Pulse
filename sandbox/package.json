@@ -13,7 +13,6 @@
     "express": "^4.19.2",
     "ws": "^8.17.0",
     "http": "0.0.1-security",
-    "https": "0.0.1-security",
     "axios": "^1.6.0",
     "path": "^0.12.7",
     "socket.io": "^4.7.5",

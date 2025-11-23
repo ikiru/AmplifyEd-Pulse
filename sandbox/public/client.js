@@ -1,5 +1,5 @@
 /* globals io */
-// AmplifyEd Sandbox — client (hardened)
+// AmplifyEd Sandbox - client (hardened)
 
 ////////////////////////////////////////
 // Socket + DOM helpers
@@ -162,7 +162,7 @@ function renderMsg(m) {
   div.className = 'msg';
   const who = m.authorType === 'bot' ? 'AmplifyEd' : (m.userId || 'User');
   const t = new Date(m.ts || Date.now()).toLocaleTimeString();
-  div.innerHTML = `<strong>${escapeHtml(who)}</strong> <span class="meta">— ${t}</span><br>${escapeHtml(m.text)}`;
+  div.innerHTML = `<strong>${escapeHtml(who)}</strong> <span class="meta">- ${t}</span><br>${escapeHtml(m.text)}`;
   thread.appendChild(div);
   thread.scrollTop = thread.scrollHeight;
 }

@@ -1,0 +1,73 @@
+.thread-container {
+  max-width: 900px;
+  margin: 0 auto;
+  padding: 40px 20px;
+}
+
+.thread-title {
+  font-size: 28px;
+  font-weight: 700;
+  margin-bottom: 20px;
+}
+
+.thread-card {
+  background: #ffffff;
+  border-radius: 12px;
+  padding: 20px;
+  min-height: 60vh;
+  display: flex;
+  flex-direction: column;
+  border: 1px solid #e3e3e3;
+}
+
+.message-list {
+  flex: 1;
+  overflow-y: auto;
+  padding-right: 8px;
+}
+
+.message-empty {
+  font-size: 14px;
+  color: #777;
+  padding: 12px;
+  border: 1px dashed #ccc;
+  border-radius: 8px;
+  text-align: center;
+}
+
+.message-bubble {
+  background: #f6f7f9;
+  padding: 12px 14px;
+  border-radius: 10px;
+  margin-bottom: 12px;
+  line-height: 1.4;
+  font-size: 15px;
+}
+
+.message-input-bar {
+  display: flex;
+  gap: 10px;
+  margin-top: 20px;
+}
+
+.message-input {
+  flex: 1;
+  padding: 12px;
+  font-size: 15px;
+  border: 1px solid #ddd;
+  border-radius: 8px;
+}
+
+.message-send {
+  background: #0077ff;
+  border: none;
+  color: white;
+  padding: 12px 18px;
+  border-radius: 8px;
+  cursor: pointer;
+  font-weight: 600;
+}
+
+.message-send:hover {
+  background: #005fcc;
+}

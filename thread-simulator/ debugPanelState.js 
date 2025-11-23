@@ -1,0 +1,31 @@
+// thread-simulator/debugPanelState.js
+
+export class DebugPanelState {
+  constructor() {
+    this.state = {
+      situation: "",
+      recommendedMove: "",
+      finalMove: "",
+      signals: {},
+      rawInterpreter: {}
+    };
+
+    this.listeners = [];
+  }
+
+  subscribe(fn) {
+    this.listeners.push(fn);
+  }
+
+  update(interpreterOutput) {
+    this.state = {
+      situation: interpreterOutput?.situation || "",
+      recommendedMove: interpreterOutput?.recommendedMove || "",
+      finalMove: interpreterOutput?.recommendedMove || "",
+      signals: interpreterOutput?.signals || {},
+      rawInterpreter: interpreterOutput
+    };
+
+    for (const fn of this.listeners) fn(this.state);
+  }
+}

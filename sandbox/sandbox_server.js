@@ -1,7 +1,9 @@
 // sandbox/sandbox_server.js
-// AmplifyEd Sandbox server — runs local facilitator sandbox with Socket.io
+// AmplifyEd Sandbox server - facilitator sandbox with Socket.io
 
-import "dotenv/config";
+import dotenv from "dotenv";
+dotenv.config();
+
 import fs from "fs";
 import path from "path";
 import { fileURLToPath } from "url";
@@ -11,16 +13,8 @@ import { Server } from "socket.io";
 import { OpenAI } from "openai";
 import { v4 as uuid } from "uuid";
 
-const DEBUG = process.env.DEBUG_PULSE === "1";
-function logDebug(...args) {
-  if (DEBUG) console.log("[debug]", ...args);
-}
-
 import { makeState, getSession } from "./facilitator/stateStore.js";
-import {
-  onIncomingMessage,
-  maybeIntervene
-} from "./facilitator/facilitatorLogic.js";
+import { runEngine } from "../engine/index.js";
 
 // ---------------------------------------------------------------------------
 // Paths & config
@@ -28,7 +22,8 @@ import {
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
-const PORT = process.env.PORT || 4001;
+// 🔧 Lock the sandbox to 4001 by default
+const PORT = process.env.PORT ? Number(process.env.PORT) : 4001;
 const MODEL = process.env.MODEL || "gpt-4o-mini";
 
 const ROLE_GROUPS_PATH = path.join(__dirname, "config", "roleGroups.json");
@@ -36,35 +31,10 @@ const roleMap = JSON.parse(fs.readFileSync(ROLE_GROUPS_PATH, "utf8"));
 
 const openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
 
-// Ensure transcript directory exists
 const LOG_DIR = path.join(__dirname, "data", "session_logs");
 fs.mkdirSync(LOG_DIR, { recursive: true });
 
-const sleep = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
-
-// ---------------------------------------------------------------------------
-// Express + Socket.io bootstrap
-// ---------------------------------------------------------------------------
-const app = express();
-const server = http.createServer(app);
-
-// Correct CORS: frontend runs on 3000, server on 4001
-const io = new Server(server, {
-  cors: {
-    origin: "http://localhost:3000",
-    methods: ["GET", "POST"],
-    credentials: true
-  }
-});
-
-
-// Serve static sandbox client
-app.use(express.static(path.join(__dirname, "public")));
-
-// health check
-app.get("/health", (_req, res) => res.json({ ok: true, model: MODEL }));
-
-// In-memory state
+// In-memory state for all sessions
 const state = makeState();
 
 // ---------------------------------------------------------------------------
@@ -72,16 +42,32 @@ const state = makeState();
 // ---------------------------------------------------------------------------
 function persistTranscript(sessionId, messages) {
   try {
-    const filePath = path.join(LOG_DIR, `${sanitize(sessionId)}.json`);
+    const safe = String(sessionId).replace(/[^a-z0-9._-]/gi, "_");
+    const filePath = path.join(LOG_DIR, `${safe}.json`);
     fs.writeFileSync(filePath, JSON.stringify(messages, null, 2));
   } catch (e) {
     console.warn("[sandbox] persist failed:", e.message);
   }
 }
 
-function sanitize(name) {
-  return String(name).replace(/[^a-z0-9._-]/gi, "_");
-}
+// ---------------------------------------------------------------------------
+// Express + Socket.io bootstrap
+// ---------------------------------------------------------------------------
+const app = express();
+const server = http.createServer(app);
+
+const io = new Server(server, {
+  cors: {
+    origin: "http://localhost:5173",
+    methods: ["GET", "POST"],
+    credentials: true,
+  },
+});
+
+app.use(express.static(path.join(__dirname, "public")));
+app.get("/health", (_req, res) =>
+  res.json({ ok: true, model: MODEL })
+);
 
 // ---------------------------------------------------------------------------
 // Socket handlers
@@ -89,260 +75,207 @@ function sanitize(name) {
 io.on("connection", (socket) => {
   console.log("[socket] connected:", socket.id);
 
-  // Boot user into demo-1 room ONCE
+  // For now we keep a single shared demo session
   const sessionId = "demo-1";
-  const s = getSession(state, sessionId);
-  s.messages ??= [];
-  s.tuning ??= { dominance: 0.4, stall: 0.25, cooldownMs: 45_000 };
-  s.promptOverride ??= "";
-  s.lastBotAt ??= 0;
+  const baseSession = getSession(state, sessionId);
 
+  baseSession.messages ??= [];
+  baseSession.tuning ??= { dominance: 0.4, stall: 0.25, cooldownMs: 45000 };
+  baseSession.promptOverride ??= "";
+  baseSession.lastBotAt ??= 0;
+  baseSession.members ??= new Set();
+
+  baseSession.members.add(socket.id);
   socket.join(sessionId);
-  io.to(socket.id).emit("threadInit", s.messages);
-  // Mark session as freshly connected so first intervention is skipped
-  s._justConnected = true;
 
-  // -------------------------------------------------------------------------
-  // Inspector tuning
-  // -------------------------------------------------------------------------
-  socket.on("tuning", (payload = {}) => {
-    try {
-      const session = getSession(state, payload.sessionId || sessionId);
-      session.tuning = {
-        dominance: payload.dominance ?? session.tuning?.dominance ?? 0.4,
-        stall: payload.stall ?? session.tuning?.stall ?? 0.25,
-        cooldownMs: payload.cooldownMs ?? session.tuning?.cooldownMs ?? 45000
-      };
-    } catch (e) {
-      console.warn("[sandbox] tuning error:", e.message);
-    }
+  // Initial payload for this client
+  io.to(socket.id).emit("threadInit", {
+    sessionId,
+    messages: baseSession.messages,
+    memberCount: baseSession.members.size,
+    tuning: baseSession.tuning,
   });
 
-  // -------------------------------------------------------------------------
-  // Prompt overrides
-  // -------------------------------------------------------------------------
-  socket.on("promptOverride", (payload = {}) => {
-    try {
-      const session = getSession(state, payload.sessionId || sessionId);
-      session.promptOverride = String(payload.text || "");
-    } catch (e) {
-      console.warn("[sandbox] promptOverride error:", e.message);
-    }
+  io.to(sessionId).emit("presenceUpdate", {
+    memberCount: baseSession.members.size,
+    members: Array.from(baseSession.members),
   });
 
-  // -------------------------------------------------------------------------
-  // Clear server-side session state
-  // -------------------------------------------------------------------------
-  socket.on("clearSession", (payload = {}) => {
-    const targetId = payload.sessionId || sessionId;
-    const targetSession = getSession(state, targetId);
-    targetSession.messages = [];
-    targetSession.userStats = {};
-    targetSession.lastBotAt = 0;
-    console.log("[sandbox] clearing session memory", { sessionId: targetId });
-    io.to(targetId).emit("threadInit", []);
+  // -------------------------------------------------------------
+  // USER MESSAGE (legacy simple path, still used by some UIs)
+  // -------------------------------------------------------------
+  socket.on("userMessage", ({ sessionId: sid, text }) => {
+    const sess = getSession(state, sid || sessionId);
+    sess.messages ??= [];
+
+    const msg = {
+      id: uuid(),
+      sender: "user",
+      text,
+      ts: Date.now(),
+    };
+
+    sess.messages.push(msg);
+    io.to(sid || sessionId).emit("threadUpdate", sess.messages);
   });
 
-  // -------------------------------------------------------------------------
-  // Human message from UI
-  // -------------------------------------------------------------------------
+  // -------------------------------------------------------------
+  // HUMAN MESSAGE (main AI flow)
+  // -------------------------------------------------------------
   socket.on("humanMessage", async (payload = {}) => {
     try {
       const {
-        sessionId = "demo-1",
+        sessionId: incomingSessionId = "demo-1",
         userId = "User",
         role = "teacher",
         text = "",
         id: incomingId,
-        authorType
+        authorType,
       } = payload;
 
+      const sid = incomingSessionId || "demo-1";
+      const session = getSession(state, sid);
       const roleGroup = roleMap[role] || "educator";
-      const session = getSession(state, sessionId);
 
       session.messages ??= [];
       session.tuning ??= { dominance: 0.4, stall: 0.25, cooldownMs: 45000 };
       session.promptOverride ??= "";
       session.lastBotAt ??= 0;
 
-      const trimmed = text.trim();
+      const trimmed = String(text || "").trim();
       if (!trimmed) return;
-      logDebug("incoming message:", { sessionId, userId, role, text: trimmed, authorType });
 
-      // Prevent message floods (safety)
-      const receivedAt = Date.now();
+      // Flood control
+      const now = Date.now();
       if (!session.lastMsgAt) session.lastMsgAt = 0;
-      if (receivedAt - session.lastMsgAt < 300) {
-        console.log("[sandbox] message ignored (too fast)", { sessionId });
-        return;
-      }
-      session.lastMsgAt = receivedAt;
+      if (now - session.lastMsgAt < 300) return;
+      session.lastMsgAt = now;
 
-      // Bots never trigger more bot responses
+      // Bots never trigger bots
       if (authorType === "bot") {
-        session.lastBotAt = Date.now();
+        session.lastBotAt = now;
         return;
       }
 
-      // Add human message
+      // -----------------------------------------
+      // Store human message
+      // -----------------------------------------
       const humanMsg = {
-        id: typeof incomingId === "string" && incomingId.trim() ? incomingId.trim() : uuid(),
-        sessionId,
+        id: incomingId?.trim() || uuid(),
+        sessionId: sid,
         userId,
         role,
         authorType: "human",
         text: trimmed,
-        ts: Date.now()
+        ts: now,
       };
 
       session.messages.push(humanMsg);
-      console.log("[sandbox] ← humanMessage", {
-        sessionId,
-        userId,
-        text: trimmed,
-      });
-      io.to(sessionId).emit("newMessage", humanMsg);
+      io.to(sid).emit("newMessage", humanMsg);
 
-      // Update state
-      onIncomingMessage(session, humanMsg);
-
-      // Cooldown check
-      const now = Date.now();
-      const cooldownMs = session.tuning.cooldownMs;
-
-      // Send cooldown data to frontend
-      const elapsed = now - session.lastBotAt;
-      const remaining = Math.max(0, cooldownMs - elapsed);
-
-      io.to(sessionId).emit("cooldownUpdate", {
-        sessionId,
-        cooldownMs,
-        elapsed,
-        remaining,
-        remainingMs: remaining,
-        ready: remaining <= 0,
-      });
-
-      // enforce cooldown
-      if (remaining > 0) {
-        console.log("[sandbox] cooldown active, skipping AI", {
-          sessionId,
-          remainingMs: remaining,
-        });
-        persistTranscript(sessionId, session.messages);
-        return;
-      }
-
-      // Decide whether to respond
-      console.log("[sandbox] → evaluating intervention", {
-        sessionId,
+      session.id = sid;
+      const { signals, interpretation, move } = await runEngine({
+        session,
+        humanMsg,
+        role,
         roleGroup,
-        cooldownMs,
-        messages: session.messages.length,
+        openai,
+        model: MODEL,
       });
-      if (session._interveneLock) {
-        console.log("[sandbox] BLOCKED — intervention lock active", { sessionId });
-        persistTranscript(sessionId, session.messages);
-        return;
-      }
+console.log("[sandbox] move from engine:", JSON.stringify(move, null, 2));
 
-      session._interveneLock = true;
-      let reply;
-      try {
-        reply = await maybeIntervene({
-          session,
-          sessionId,
-          roleGroup,
-          openai,
-          model: MODEL,
-          tuning: session.tuning,
-          systemOverride: session.promptOverride
-        });
-      } finally {
-        session._interveneLock = false;
-      }
+      const status = interpretation.situation || "healthy";
+      const recommendedMove = interpretation.recommendedMove || "none";
 
-      const interpretation = session.lastInterpretation;
-      if (interpretation?.move && interpretation.move !== "none") {
-        console.log("[interpreter] recommending move:", interpretation.move);
-      }
-      let replyText = "";
-      let replyMeta = null;
-      let shouldReply = false;
-
-      if (typeof reply === "string") {
-        replyText = reply;
-        shouldReply = Boolean(reply?.trim());
-      } else if (reply && typeof reply === "object") {
-        replyMeta = reply.metadata || null;
-        replyText = reply.reply || "";
-        shouldReply = reply.shouldReply !== false && Boolean(replyText?.trim());
-      }
-
-      console.log("[sandbox] intervention result", {
-        sessionId,
-        hasReply: shouldReply,
-        strategy: replyMeta?.strategy || "standard",
+      io.to(sid).emit("interpreterUpdate", {
+        status,
+        recommendedMove,
+        signals,
       });
 
-      if (replyMeta?.strategy === "stall-hybrid") {
-        console.log("[sandbox] HYBRID STALL", { sessionId, preview: replyText.slice(0, 80) });
-        await sleep(600);
+      if (move.focusMessageId) {
+        io.to(sid).emit("interpreterFocus", {
+          messageId: move.focusMessageId,
+        });
       }
 
-      if (shouldReply) {
-        const botMsg = {
-          id: uuid(),
-          sessionId,
-          userId: "AmplifyEd",
-          role,
-          authorType: "bot",
-          text: replyText.trim(),
-          ts: Date.now()
-        };
-
-        session.messages.push(botMsg);
-        session.lastBotAt = botMsg.ts;
-
-        // Start cooldown countdown loop
-        const total = session.tuning.cooldownMs;
-        let remaining = total;
-
-        if (session._cooldownTimer) clearInterval(session._cooldownTimer);
-
-        session._cooldownTimer = setInterval(() => {
-          remaining -= 1000;
-          if (remaining <= 0) {
-            clearInterval(session._cooldownTimer);
-            session._cooldownTimer = null;
-            io.to(sessionId).emit("cooldownUpdate", { remainingMs: 0 });
-          } else {
-            io.to(sessionId).emit("cooldownUpdate", { remainingMs: remaining });
-          }
-        }, 1000);
-
-        console.log("[sandbox] → emitting bot message", {
-          sessionId,
-          preview: botMsg.text.slice(0, 120),
-        });
-        logDebug("outgoing bot reply:", {
-          sessionId,
-          text: botMsg.text,
-          metadata: replyMeta,
-        });
-        io.to(sessionId).emit("newMessage", botMsg);
-      } else {
-        console.log("[sandbox] no bot reply emitted", { sessionId });
+      if (move.cooldown) {
+        io.to(sid).emit("cooldownUpdate", move.cooldown);
       }
 
-      persistTranscript(sessionId, session.messages);
+      if (move.shouldReply && move.botMessage) {
+        io.to(sid).emit("newMessage", move.botMessage);
+      }
 
-    } catch (err) {
-      console.warn("[sandbox] humanMessage error:", err.message);
+      persistTranscript(sid, session.messages);
+   } catch (err) {
+  console.error("[sandbox] humanMessage error:", err);
+}
+
+  });
+
+  // -------------------------------------------------------------
+  // TUNING
+  // -------------------------------------------------------------
+  socket.on("tuning", (payload = {}) => {
+    try {
+      const targetId = payload.sessionId || sessionId;
+      const session = getSession(state, targetId);
+      session.tuning = {
+        dominance: payload.dominance ?? session.tuning.dominance,
+        stall: payload.stall ?? session.tuning.stall,
+        cooldownMs: payload.cooldownMs ?? session.tuning.cooldownMs,
+      };
+    } catch (e) {
+      console.warn("[sandbox] tuning error:", e.message);
     }
   });
-  socket.on("disconnect", (reason) => {
-    console.log("[socket] disconnected:", socket.id, reason);
+
+  // -------------------------------------------------------------
+  // PROMPT OVERRIDE
+  // -------------------------------------------------------------
+  socket.on("promptOverride", (payload = {}) => {
+    try {
+      const targetId = payload.sessionId || sessionId;
+      const session = getSession(state, targetId);
+      session.promptOverride = String(payload.text || "");
+    } catch (e) {
+      console.warn("[sandbox] promptOverride error:", e.message);
+    }
+  });
+
+  // -------------------------------------------------------------
+  // CLEAR SESSION
+  // -------------------------------------------------------------
+  socket.on("clearSession", (payload = {}) => {
+    const targetId = payload.sessionId || sessionId;
+    const session = getSession(state, targetId);
+
+    session.messages = [];
+    session.userStats = {};
+    session.lastBotAt = 0;
+    session.lastInterpretation = null;
+
+    io.to(targetId).emit("threadInit", {
+      sessionId: targetId,
+      messages: [],
+      memberCount: (session.members && session.members.size) || 1,
+      tuning: session.tuning,
+    });
+  });
+
+  // -------------------------------------------------------------
+  // DISCONNECT
+  // -------------------------------------------------------------
+  socket.on("disconnect", () => {
+    if (baseSession.members) baseSession.members.delete(socket.id);
+
+    io.to(sessionId).emit("presenceUpdate", {
+      memberCount: baseSession.members.size,
+      members: Array.from(baseSession.members),
+    });
+
+    console.log("[socket] disconnected:", socket.id);
   });
 });
 
@@ -356,7 +289,11 @@ server.listen(PORT, () => {
   console.log(` → http://localhost:${PORT}`);
   console.log(` → Model: ${MODEL}`);
   console.log(
-    ` → API key: ${process.env.OPENAI_API_KEY ? "loaded" : "MISSING (set OPENAI_API_KEY in sandbox/.env)"}`
+    ` → API key: ${
+      process.env.OPENAI_API_KEY
+        ? "loaded"
+        : "MISSING (set OPENAI_API_KEY in sandbox/.env)"
+    }`
   );
   console.log("===============================================");
 });
