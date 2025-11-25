@@ -1,15 +1,21 @@
 export const MOVE_PRIORITY = {
-  clarify: 90,
-  reframe: 80,
-  invite: 70,
-  summarize: 60,
-  nudge: 50,
+  alert_safety: 100,
+  stabilize: 95,
+  deescalate: 90,
+  clarify: 80,
+  reframe: 70,
+  invite: 60,
+  summarize: 55,
+  nudge: 45,
   none: 0,
 };
 
 export function normalizeInterpreterMove(move) {
   if (!move) return "none";
   if (move === "invite_quiet_voices") return "invite";
+  if (move === "deescalate_aggression") return "deescalate";
+  if (move === "alert_safety") return "alert_safety";
+  if (move === "stabilize") return "stabilize";
   return MOVE_PRIORITY.hasOwnProperty(move) ? move : "none";
 }
 
@@ -24,6 +30,8 @@ export function moveFromSituation(situation) {
       return "invite";
     case "summary":
       return "summarize";
+    case "aggression":
+      return "alert_safety";
     default:
       return "none";
   }

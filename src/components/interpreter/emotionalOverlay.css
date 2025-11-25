@@ -1,0 +1,188 @@
+/* ----------------------------------------------------------
+   Base container
+---------------------------------------------------------- */
+.emo-overlay {
+  position: absolute;
+  top: 16px;
+  left: 16px;
+  right: 16px;
+  padding: 14px 18px;
+  border-radius: 14px;
+  backdrop-filter: blur(6px);
+  background: rgba(255, 255, 255, 0.65);
+  border: 1px solid rgba(200, 200, 200, 0.35);
+
+  box-shadow:
+    0 0 0 0 rgba(255,255,255,0),
+    inset 0 1px 4px rgba(0,0,0,0.08);
+
+  opacity: 0;
+  transform: translateY(-6px);
+  transition:
+    opacity 300ms ease,
+    transform 300ms ease;
+  pointer-events: none;
+  z-index: 100;
+}
+
+/* ----------------------------------------------------------
+   Show / Hide
+---------------------------------------------------------- */
+.emo-overlay.show {
+  opacity: 1;
+  transform: translateY(0);
+}
+
+.emo-overlay.hide {
+  opacity: 0;
+  transform: translateY(-6px);
+}
+
+/* ----------------------------------------------------------
+   Header + Text
+---------------------------------------------------------- */
+.emo-header {
+  font-size: 0.85rem;
+  font-weight: 700;
+  margin-bottom: 6px;
+  color: #0f172a;
+}
+
+.emo-line {
+  font-size: 0.78rem;
+  margin-bottom: 4px;
+  color: #1e293b;
+}
+
+.emo-label {
+  font-weight: 600;
+  color: #475569;
+}
+
+/* ----------------------------------------------------------
+   Risk Badge
+---------------------------------------------------------- */
+.emo-risk-badge {
+  margin-top: 10px;
+  padding: 4px 10px;
+  border-radius: 20px;
+  font-size: 0.72rem;
+  font-weight: 600;
+  width: fit-content;
+  color: white;
+}
+
+.risk-high {
+  background: #dc2626;
+}
+
+.risk-medium {
+  background: #ea580c;
+}
+
+.risk-low {
+  background: #0284c7;
+}
+
+/* ----------------------------------------------------------
+   Pulse Glow Based on Intensity
+---------------------------------------------------------- */
+.emo-overlay[data-intensity] {
+  animation: intensityPulse 4s infinite ease-in-out;
+}
+
+@keyframes intensityPulse {
+  0% { box-shadow: 0 0 0 0 rgba(59,130,246,0.25); }
+  50% { box-shadow: 0 0 20px 4px rgba(59,130,246,0.15); }
+  100% { box-shadow: 0 0 0 0 rgba(59,130,246,0.25); }
+}
+
+.risk-medium {
+  animation: mediumPulse 3s infinite ease-in-out;
+}
+@keyframes mediumPulse {
+  0% { box-shadow: 0 0 0 0 rgba(234,88,12,0.25); }
+  50% { box-shadow: 0 0 25px 6px rgba(234,88,12,0.2); }
+  100% { box-shadow: 0 0 0 0 rgba(234,88,12,0.25); }
+}
+
+.risk-high {
+  animation: highPulse 2.2s infinite ease-in-out;
+}
+@keyframes highPulse {
+  0% { box-shadow: 0 0 0 0 rgba(220,38,38,0.25); }
+  50% { box-shadow: 0 0 32px 10px rgba(220,38,38,0.20); }
+  100% { box-shadow: 0 0 0 0 rgba(220,38,38,0.25); }
+}
+
+/* ----------------------------------------------------------
+   Heartbeat Ripple for high intensity
+---------------------------------------------------------- */
+.risk-high::after {
+  content: "";
+  position: absolute;
+  inset: -6px;
+  border-radius: 16px;
+  border: 2px solid rgba(220,38,38,0.35);
+  animation: heartbeat 1.1s infinite ease-out;
+  pointer-events: none;
+}
+
+@keyframes heartbeat {
+  0% { transform: scale(1); opacity: 0.6; }
+  40% { transform: scale(1.12); opacity: 0.0; }
+  100% { transform: scale(1); opacity: 0; }
+}
+
+/* ----------------------------------------------------------
+   Glow Waves (ambient aura)
+---------------------------------------------------------- */
+.emo-overlay.show {
+  animation: glowWave 14s infinite linear;
+}
+
+@keyframes glowWave {
+  0% { background: rgba(255,255,255,0.75); }
+  33% { background: rgba(240,248,255,0.75); }
+  66% { background: rgba(255,244,230,0.75); }
+  100% { background: rgba(255,255,255,0.75); }
+}
+
+/* ----------------------------------------------------------
+   Signal-trigger flashes
+---------------------------------------------------------- */
+.risk-high.flash {
+  animation: flashRed 600ms ease-out;
+}
+@keyframes flashRed {
+  from { box-shadow: 0 0 14px 6px rgba(220,38,38,0.5); }
+  to   { box-shadow: 0 0 0 0 rgba(220,38,38,0); }
+}
+
+.risk-medium.flash {
+  animation: flashAmber 600ms ease-out;
+}
+@keyframes flashAmber {
+  from { box-shadow: 0 0 14px 6px rgba(234,88,12,0.5); }
+  to   { box-shadow: 0 0 0 0 rgba(234,88,12,0); }
+}
+
+/* ----------------------------------------------------------
+   Whisper Note (status-shift)
+---------------------------------------------------------- */
+.emo-whisper {
+  position: absolute;
+  bottom: -14px;
+  right: 6px;
+  font-size: 0.65rem;
+  color: #64748b;
+  opacity: 0;
+  animation: whisperFade 2.5s forwards ease-out;
+}
+
+@keyframes whisperFade {
+  0% { opacity: 0; transform: translateY(4px); }
+  15% { opacity: 1; transform: translateY(0); }
+  80% { opacity: 1; }
+  100% { opacity: 0; transform: translateY(-4px); }
+}

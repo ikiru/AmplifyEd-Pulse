@@ -37,6 +37,147 @@ fs.mkdirSync(LOG_DIR, { recursive: true });
 // In-memory state for all sessions
 const state = makeState();
 
+//-----------------------------------------------------
+// SERVER COOLDOWN ENGINE (OPTION 3 — EMOTION TRIGGERED)
+//-----------------------------------------------------
+
+let cooldownActive = false;
+let cooldownEndsAt = 0;
+let cooldownTimer = null;
+
+const TICK_INTERVAL = 100;
+const HEAT_THRESHOLD = 0.65; // 65%
+const EMOTION_THRESHOLD = 0.70; // 70%
+
+function startCooldown(socket, sessionId, durationMs = 5000) {
+  if (cooldownActive) return;
+
+  cooldownActive = true;
+  cooldownEndsAt = Date.now() + durationMs;
+
+  socket.emit("cooldownUpdate", {
+    sessionId,
+    ready: false,
+    remainingMs: durationMs,
+  });
+
+  if (cooldownTimer) clearInterval(cooldownTimer);
+
+  cooldownTimer = setInterval(() => {
+    const remaining = cooldownEndsAt - Date.now();
+
+    if (remaining <= 0) {
+      clearInterval(cooldownTimer);
+      cooldownTimer = null;
+      cooldownActive = false;
+
+      socket.emit("cooldownUpdate", {
+        sessionId,
+        ready: true,
+        remainingMs: 0,
+      });
+      return;
+    }
+
+    socket.emit("cooldownUpdate", {
+      sessionId,
+      ready: false,
+      remainingMs: remaining,
+    });
+  }, TICK_INTERVAL);
+}
+
+function evaluateCooldown(socket, sessionId, heat, emotionalTemp) {
+  if (!cooldownActive) {
+    if (
+      heat >= HEAT_THRESHOLD * 100 ||
+      emotionalTemp >= EMOTION_THRESHOLD * 100
+    ) {
+      startCooldown(socket, sessionId, 5000);
+    }
+  }
+}
+
+// -------- Emotion History (Phase 3A) --------------------------
+const MAX_EMOTION_HISTORY = 20; // keep only latest 20
+
+function updateEmotionHistory(session, emotionValue = 0) {
+  if (!session.emotionHistory) session.emotionHistory = [];
+
+  session.emotionHistory.push({
+    ts: Date.now(),
+    value: Math.max(0, Math.min(100, emotionValue)),
+  });
+
+  if (session.emotionHistory.length > MAX_EMOTION_HISTORY) {
+    session.emotionHistory.shift();
+  }
+}
+
+function computeHeatFromMessages(messages = []) {
+  const last = messages[messages.length - 1];
+  if (!last || typeof last.text !== "string") return 0;
+  const txt = last.text.toLowerCase();
+  if (txt.includes("hate") || txt.includes("angry") || txt.includes("kill")) return 85;
+  if (
+    txt.includes("threat") ||
+    txt.includes("snap") ||
+    txt.includes("i'm done") ||
+    txt.includes("i am done")
+  )
+    return 90;
+  if (txt.includes("lost") || txt.includes("confused") || txt.includes("upset")) return 60;
+  return 10;
+}
+
+function computeSignalsFromMessages(messages = []) {
+  const last = messages[messages.length - 1];
+  if (!last || typeof last.text !== "string") return [];
+  const txt = last.text.toLowerCase();
+  const result = [];
+  if (txt.includes("hate")) result.push({ type: "anger", strength: 0.85 });
+  if (txt.includes("lost")) result.push({ type: "confusion", strength: 0.6 });
+  if (txt.includes("confused")) result.push({ type: "confusion", strength: 0.7 });
+  if (txt.includes("kill")) result.push({ type: "violence", strength: 0.9 });
+  if (
+    txt.includes("threat") ||
+    txt.includes("snap") ||
+    txt.includes("i'm done") ||
+    txt.includes("i am done")
+  ) {
+    result.push({ type: "aggression", strength: 0.8 });
+  }
+  return result;
+}
+
+function broadcastSignalUpdate(io, sessionId, messages = []) {
+  const heat = computeHeatFromMessages(messages);
+  const signals = computeSignalsFromMessages(messages);
+  io.to(sessionId).emit("signalUpdate", {
+    sessionId,
+    heat,
+    signals,
+  });
+}
+
+function computeIntensity(interpretation = {}, signals = []) {
+  const situation = interpretation?.situation || "healthy";
+  const signalCount = Array.isArray(signals) ? signals.length : 0;
+  const baseMap = {
+    healthy: 30,
+    summary: 45,
+    confusion: 65,
+    dominance: 75,
+    barrier: 85,
+  };
+  let value = baseMap[situation] ?? 40;
+  value += Math.min(20, signalCount * 5);
+  if (signals.some((s) => s.type === "aggression")) {
+    value = Math.max(value, 90);
+  }
+  return Math.max(0, Math.min(100, value));
+}
+
 // ---------------------------------------------------------------------------
 // Helpers
 // ---------------------------------------------------------------------------
@@ -95,6 +236,7 @@ io.on("connection", (socket) => {
     memberCount: baseSession.members.size,
     tuning: baseSession.tuning,
   });
+  broadcastSignalUpdate(io, sessionId, baseSession.messages);
 
   io.to(sessionId).emit("presenceUpdate", {
     memberCount: baseSession.members.size,
@@ -117,6 +259,7 @@ io.on("connection", (socket) => {
 
     sess.messages.push(msg);
     io.to(sid || sessionId).emit("threadUpdate", sess.messages);
+    broadcastSignalUpdate(io, sid || sessionId, sess.messages);
   });
 
   // -------------------------------------------------------------
@@ -124,6 +267,10 @@ io.on("connection", (socket) => {
   // -------------------------------------------------------------
   socket.on("humanMessage", async (payload = {}) => {
     try {
+      if (cooldownActive) {
+        return;
+      }
+
       const {
         sessionId: incomingSessionId = "demo-1",
         userId = "User",
@@ -171,10 +318,14 @@ io.on("connection", (socket) => {
       };
 
       session.messages.push(humanMsg);
-      io.to(sid).emit("newMessage", humanMsg);
+
+      // Prevent bot from responding to the human message if cooldown is already active
+      if (cooldownActive) {
+        console.log("Cooldown active — human message stored, but bot response blocked");
+      }
 
       session.id = sid;
-      const { signals, interpretation, move } = await runEngine({
+      const { signals, interpretation, move, aggressionLevel } = await runEngine({
         session,
         humanMsg,
         role,
@@ -183,6 +334,22 @@ io.on("connection", (socket) => {
         model: MODEL,
       });
 console.log("[sandbox] move from engine:", JSON.stringify(move, null, 2));
+
+      const heatValue = computeIntensity(interpretation, signals);
+      const emotionalTemp = Math.min(
+        100,
+        Math.max(0, heatValue * 0.65 + (signals.length * 10))
+      );
+
+      evaluateCooldown(io.to(sid), sid, heatValue, emotionalTemp);
+      if (cooldownActive) {
+        console.log("Cooldown triggered BEFORE human message send");
+      }
+
+      humanMsg.complexity = interpretation?.complexity;
+      humanMsg.emotionalTemp = interpretation?.emotionalTemp;
+      io.to(sid).emit("newMessage", humanMsg);
+      broadcastSignalUpdate(io, sid, session.messages);
 
       const status = interpretation.situation || "healthy";
       const recommendedMove = interpretation.recommendedMove || "none";
@@ -193,21 +360,58 @@ console.log("[sandbox] move from engine:", JSON.stringify(move, null, 2));
         signals,
       });
 
+      io.to(sid).emit("threadIntensity", {
+        sessionId: sid,
+        intensity: heatValue,
+        reasons: interpretation.reasoning || [],
+      });
+
+      io.to(sid).emit("stateUpdate", {
+        heat: heatValue,
+        emotionalTemp,
+        aggressionLevel,
+        signals,
+      });
+
       if (move.focusMessageId) {
         io.to(sid).emit("interpreterFocus", {
           messageId: move.focusMessageId,
         });
       }
 
-      if (move.cooldown) {
-        io.to(sid).emit("cooldownUpdate", move.cooldown);
-      }
+      const runFacilitatorMove = () => {
+        // NEW: Prevent typing pulses during cooldown
+        if (cooldownActive) {
+          io.to(sid).emit("facilitatorTyping", { typing: false });
+          console.log("Facilitator suppressed (cooldown active)");
+          return;
+        }
 
-      if (move.shouldReply && move.botMessage) {
-        io.to(sid).emit("newMessage", move.botMessage);
-      }
+        // Normal behavior resumes ONLY when not cooling down
+        if (move.shouldReply && move.botMessage) {
+          io.to(sid).emit("facilitatorTyping", { typing: true });
+
+          io.to(sid).emit("newMessage", move.botMessage);
+          broadcastSignalUpdate(io, sid, session.messages);
+
+          io.to(sid).emit("facilitatorTyping", { typing: false });
+        } else if (move.shouldReply === false) {
+          // Ensure typing isn't displayed
+          io.to(sid).emit("facilitatorTyping", { typing: false });
+        }
+      };
+
+      runFacilitatorMove();
 
       persistTranscript(sid, session.messages);
+
+      // ---- Trendline emission -------------------------------------
+      updateEmotionHistory(session, interpretation.emotion ?? 0);
+
+      io.to(sid).emit("emotionHistoryUpdate", {
+        sessionId: sid,
+        history: session.emotionHistory,
+      });
    } catch (err) {
   console.error("[sandbox] humanMessage error:", err);
 }
@@ -244,6 +448,11 @@ console.log("[sandbox] move from engine:", JSON.stringify(move, null, 2));
     }
   });
 
+  socket.on("threadIntensity", (payload = {}) => {
+    if (!payload.sessionId) return;
+    io.to(payload.sessionId).emit("threadIntensity", payload);
+  });
+
   // -------------------------------------------------------------
   // CLEAR SESSION
   // -------------------------------------------------------------
@@ -262,6 +471,7 @@ console.log("[sandbox] move from engine:", JSON.stringify(move, null, 2));
       memberCount: (session.members && session.members.size) || 1,
       tuning: session.tuning,
     });
+    broadcastSignalUpdate(io, targetId, session.messages);
   });
 
   // -------------------------------------------------------------

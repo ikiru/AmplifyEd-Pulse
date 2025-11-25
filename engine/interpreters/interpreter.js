@@ -1,10 +1,13 @@
 // -------------------------------------------------------------
-// interpreter.js - CLEAN CORRECTED VERSION
+// interpreter.js - CLEAN + AGGRESSION-INTEGRATED VERSION
 // -------------------------------------------------------------
 
 import { detectDominance } from "../signals/dominance.js";
 import { detectNudge } from "../signals/detectNudge.js";
 
+// -------------------------------------------------------------
+// KEYWORD GROUPS
+// -------------------------------------------------------------
 const CONFUSION_KEYWORDS_RAW = [
   "what are we actually focusing",
   "what are we focusing",
@@ -76,12 +79,11 @@ const DOMINANCE_PHRASES_RAW = [
   "obviously",
 ];
 
+// -------------------------------------------------------------
+// HELPERS
+// -------------------------------------------------------------
 function normalizeText(text = "") {
-  return text
-    .toLowerCase()
-    .replace(/’/g, "'")
-    .replace(/-/g, " ")
-    .trim();
+  return text.toLowerCase().replace(/’/g, "'").replace(/-/g, " ").trim();
 }
 
 function matches(text = "", phrases = []) {
@@ -110,12 +112,19 @@ function detectStall(messages = []) {
   return last.length <= 10 && prev.length <= 10 && last === prev;
 }
 
+// -------------------------------------------------------------
+// MAIN INTERPRETER
+// -------------------------------------------------------------
 export function interpretSession(turn, state, extraSignals = []) {
   const session = turn?.session || state || {};
   const messages = session.messages || [];
   const humanMessages = messages.filter((msg) => msg.authorType !== "bot");
   const lastMessage = humanMessages[humanMessages.length - 1];
-  const text = normalizeText(lastMessage?.text || "");
+
+  const rawText = lastMessage?.text || "";
+  const text = normalizeText(rawText);
+
+  const complexityScore = computeComplexityScore(rawText);
 
   const analysis = {
     situation: "healthy",
@@ -124,23 +133,90 @@ export function interpretSession(turn, state, extraSignals = []) {
     reasoning: [],
   };
 
+  // -------------------------------------------------------------
+  // MERGE SIGNALS (including aggression)
+  // -------------------------------------------------------------
+  const signalLookup = (extraSignals || []).reduce((acc, sig) => {
+    if (!sig || !sig.type) return acc;
+
+    const severity =
+      typeof sig.severity === "number"
+        ? sig.severity
+        : typeof sig.score === "number"
+        ? sig.score
+        : 1;
+
+    if (!acc[sig.type] || severity > acc[sig.type].severity) {
+      acc[sig.type] = { ...sig, severity };
+    }
+
+    return acc;
+  }, {});
+
+  const aggressionSignal = signalLookup.aggression;
+
+  // -------------------------------------------------------------
+  // Convert aggression score → numeric risk tier
+  // -------------------------------------------------------------
+  let aggressionLevelNumeric = 0;
+  if (aggressionSignal) {
+    const s = aggressionSignal.severity ?? aggressionSignal.score ?? 0;
+
+    if (s >= 0.75) aggressionLevelNumeric = 3;       // high-risk / explicit threat
+    else if (s >= 0.45) aggressionLevelNumeric = 2;  // escalation warning
+    else aggressionLevelNumeric = 1;                 // mild frustration
+  }
+
+  // Inline helper for final analysis block
+  const getFlags = () => ({
+    confusion: false,
+    barrier: false,
+    dominance: false,
+    aggressionLevel: aggressionLevelNumeric,
+  });
+
+  // -------------------------------------------------------------
+  // EARLY EXIT: no message
+  // -------------------------------------------------------------
   if (!lastMessage) {
     analysis.reasoning.push("No human messages yet.");
-    return analysis;
+    return finalizeAnalysis(analysis, getFlags(), rawText, complexityScore, text);
   }
 
   // -------------------------------------------------------------
-  // Stall → Clarify
+  // HIGH-RISK AGGRESSION (explicit threat)
+  // -------------------------------------------------------------
+  if (aggressionLevelNumeric === 3) {
+    analysis.situation = "high_risk";
+    analysis.recommendedMove = "stabilize";
+    analysis.signals.aggression = aggressionSignal;
+    analysis.reasoning.push("Explicit aggression detected (Level 3).");
+    return finalizeAnalysis(analysis, getFlags(), rawText, complexityScore, text);
+  }
+
+  // -------------------------------------------------------------
+  // THREAT-ADJACENT (escalation warning)
+  // -------------------------------------------------------------
+  if (aggressionLevelNumeric === 2) {
+    analysis.situation = "barrier";
+    analysis.recommendedMove = "reframe";
+    analysis.signals.aggression = aggressionSignal;
+    analysis.reasoning.push("Threat-adjacent aggression detected (Level 2).");
+    return finalizeAnalysis(analysis, getFlags(), rawText, complexityScore, text);
+  }
+
+  // -------------------------------------------------------------
+  // Stall
   // -------------------------------------------------------------
   if (detectStall(humanMessages)) {
     analysis.situation = "confusion";
     analysis.recommendedMove = "clarify";
     analysis.reasoning.push("Stall detected.");
-    return analysis;
+    return finalizeAnalysis(analysis, getFlags(), rawText, complexityScore, text);
   }
 
   // -------------------------------------------------------------
-  // Summary cues
+  // Summary signal
   // -------------------------------------------------------------
   const lastTwo = humanMessages
     .slice(-2)
@@ -150,11 +226,11 @@ export function interpretSession(turn, state, extraSignals = []) {
     analysis.situation = "summary";
     analysis.recommendedMove = "summarize";
     analysis.reasoning.push("Summary cue matched.");
-    return analysis;
+    return finalizeAnalysis(analysis, getFlags(), rawText, complexityScore, text);
   }
 
   // -------------------------------------------------------------
-  // Confusion cues
+  // Confusion
   // -------------------------------------------------------------
   if (
     matches(text, CONFUSION_KEYWORDS) ||
@@ -163,21 +239,21 @@ export function interpretSession(turn, state, extraSignals = []) {
     analysis.situation = "confusion";
     analysis.recommendedMove = "clarify";
     analysis.reasoning.push("Confusion cue matched.");
-    return analysis;
+    return finalizeAnalysis(analysis, getFlags(), rawText, complexityScore, text);
   }
 
   // -------------------------------------------------------------
-  // Barrier cues
+  // Barrier
   // -------------------------------------------------------------
   if (matches(text, BARRIER_KEYWORDS)) {
     analysis.situation = "barrier";
     analysis.recommendedMove = "reframe";
     analysis.reasoning.push("Barrier cue matched.");
-    return analysis;
+    return finalizeAnalysis(analysis, getFlags(), rawText, complexityScore, text);
   }
 
   // -------------------------------------------------------------
-  // Dominance cues
+  // Dominance
   // -------------------------------------------------------------
   const dom = detectDominance(messages);
   if (matches(text, DOMINANCE_PHRASES) || dom) {
@@ -185,11 +261,11 @@ export function interpretSession(turn, state, extraSignals = []) {
     analysis.recommendedMove = "invite_quiet_voices";
     analysis.signals.dominance = dom?.score || 1;
     analysis.reasoning.push("Dominance detected.");
-    return analysis;
+    return finalizeAnalysis(analysis, getFlags(), rawText, complexityScore, text);
   }
 
   // -------------------------------------------------------------
-  // Nudge cues (keyword-based)
+  // Nudge
   // -------------------------------------------------------------
   if (matches(text, NUDGE_KEYWORDS)) {
     analysis.situation = "healthy";
@@ -197,9 +273,6 @@ export function interpretSession(turn, state, extraSignals = []) {
     analysis.reasoning.push("Nudge cue matched (keywords).");
   }
 
-  // -------------------------------------------------------------
-  // Nudge cues (advanced signal)
-  // -------------------------------------------------------------
   const nudgeSignal = detectNudge({ humanMsg: lastMessage }, { session });
 
   if (nudgeSignal) {
@@ -210,17 +283,126 @@ export function interpretSession(turn, state, extraSignals = []) {
       analysis.recommendedMove = "nudge";
     }
 
-    analysis.reasoning.push(
-      `Nudge signal detected: ${nudgeSignal.evidence}`
-    );
+    analysis.reasoning.push(`Nudge signal detected: ${nudgeSignal.evidence}`);
   }
 
-  // -------------------------------------------------------------
-  // Default fallback
-  // -------------------------------------------------------------
   if (analysis.reasoning.length === 0) {
     analysis.reasoning.push("No deterministic signal.");
   }
 
+  return finalizeAnalysis(analysis, getFlags(), rawText, complexityScore, text);
+}
+
+// -------------------------------------------------------------
+// COMPLEXITY
+// -------------------------------------------------------------
+function computeComplexityScore(text = "") {
+  if (!text) return 0;
+
+  let score = 0;
+  const normalized = text.toLowerCase();
+
+  if (normalized.includes(" and ")) score += 0.2;
+  if (normalized.includes(" but ")) score += 0.2;
+  if (normalized.includes(" or ")) score += 0.1;
+  if (normalized.includes(" however ")) score += 0.2;
+  if (normalized.includes(" because ")) score += 0.2;
+  if (normalized.includes(",")) score += 0.15;
+  if (text.split(/\s+/).length > 25) score += 0.25;
+
+  const stressPhrases = [
+    "i'm trying",
+    "every time",
+    "nothing changes",
+    "i don't know",
+    "how do you",
+    "what am i supposed",
+    "document it",
+    "urgent",
+    "pullouts",
+    "behavior plans",
+    "interruptions",
+    "unsustainable",
+    "burnout",
+  ];
+
+  stressPhrases.forEach((phrase) => {
+    if (normalized.includes(phrase)) score += 0.05;
+  });
+
+  const escalationPhrases = [
+    "lose it",
+    "snap",
+    "done with this",
+    "don't care anymore",
+    "dont care anymore",
+  ];
+
+  escalationPhrases.forEach((phrase) => {
+    if (normalized.includes(phrase)) score += 0.08;
+  });
+
+  return Math.min(score, 1);
+}
+
+// -------------------------------------------------------------
+// FINALIZE ANALYSIS
+// -------------------------------------------------------------
+function finalizeAnalysis(analysis, flags, rawText, complexityScore, normalizedText) {
+  analysis.complexity = {
+    type: complexityScore >= 0.6 ? "complex" : null,
+    score: complexityScore,
+    detected: complexityScore >= 0.6,
+  };
+
+  analysis.emotionalTemp = computeEmotionalTemp({
+    confusion: { detected: Boolean(flags?.confusion) },
+    barrier: { detected: Boolean(flags?.barrier) },
+    dominance: { detected: Boolean(flags?.dominance) },
+    aggressionLevel: flags?.aggressionLevel,
+    complexityScore,
+    text: normalizedText || rawText.toLowerCase(),
+  });
+
   return analysis;
+}
+
+// -------------------------------------------------------------
+// EMOTIONAL TEMP
+// -------------------------------------------------------------
+function computeEmotionalTemp({
+  confusion,
+  barrier,
+  dominance,
+  aggressionLevel,
+  complexityScore,
+  text,
+}) {
+  let score = 0;
+
+  if (confusion?.detected) score += 0.25;
+  if (barrier?.detected) score += 0.25;
+  if (dominance?.detected) score += 0.2;
+
+  score += (complexityScore || 0) * 0.2;
+
+  const distressWords = [
+    "hate",
+    "exhausted",
+    "breaking",
+    "overwhelmed",
+    "can't",
+    "quit",
+    "cry",
+  ];
+
+  distressWords.forEach((word) => {
+    if (text?.includes(word)) score += 0.15;
+  });
+
+  if (aggressionLevel === 1) score += 0.15;
+  else if (aggressionLevel === 2) score += 0.35;
+  else if (aggressionLevel === 3) score += 0.55;
+
+  return Math.min(score, 1);
 }

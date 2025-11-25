@@ -1,187 +1,150 @@
-// thread-simulator/src/components/thread/InterpreterPanel.jsx
-import React, { useEffect, useState } from "react";
-import { useSocket } from "../../hooks/useSocket.js";
+import React, { useEffect, useRef, useState } from "react";
+import CooldownDisplay from "./CooldownDisplay.jsx";
+import HeatBar from "../interpreter/HeatBar.jsx";
+import EmotionBar from "../interpreter/EmotionBar.jsx";
+import TrendlineGraph from "../interpreter/TrendlineGraph.jsx";
 
-export default function InterpreterPanel({ cooldown }) {
-  const socket = useSocket();
+export default function InterpreterPanel({ cooldown, state = {} }) {
+  const barHeat = Math.max(0, Math.min(1, (state.heat ?? 0) / 100));
+  const barEmotion = Math.max(0, Math.min(1, (state.emotion ?? 0) / 100));
 
-  const [status, setStatus] = useState("Waiting on interpreter…");
-  const [recommendedMove, setRecommendedMove] = useState(null);
-  const [signals, setSignals] = useState({});
+  const [trendHistory, setTrendHistory] = useState({
+    emotion: [],
+    heat: [],
+    dominance: [],
+    barrier: [],
+  });
 
-  const moveLabels = {
-    clarify: "Clarify & focus",
-    reframe: "Reframe barrier",
-    summarize: "Summarize & recap",
-    invite_quiet_voices: "Invite quiet voices",
-    nudge: "Nudge next step",
-    none: "No move recommended",
-  };
+  const prevRef = useRef({
+    emotion: null,
+    heat: null,
+    dominance: null,
+    barrier: null,
+  });
+
+  function hybridSmooth(prev, next) {
+    if (prev == null) return next;
+    const ema = prev * 0.7 + next * 0.3;
+    const mid = (prev + next) / 2;
+    return (ema + mid + next) / 3;
+  }
 
   useEffect(() => {
-    if (!socket) return;
+    if (typeof state.emotion !== "number" || typeof state.heat !== "number") return;
 
-    const handleInterpreterUpdate = (payload = {}) => {
-      const {
-        status: rawStatus,
-        recommendedMove: rawMove,
-        signals: rawSignals,
-      } = payload;
+    const emotionNorm = Math.max(0, Math.min(1, state.emotion / 100));
+    const heatNorm = Math.max(0, Math.min(1, state.heat / 100));
+    const dominanceNorm = Math.max(0, Math.min(1, heatNorm * 0.6));
+    const barrierNorm = Math.max(0, Math.min(1, emotionNorm * 0.4));
 
-      if (rawStatus) {
-        const pretty =
-          rawStatus === "healthy"
-            ? "Healthy flow"
-            : rawStatus.charAt(0).toUpperCase() + rawStatus.slice(1);
-        setStatus(pretty);
-      } else {
-        setStatus("Waiting on interpreter…");
-      }
-
-      if (rawMove) {
-        setRecommendedMove(moveLabels[rawMove] || rawMove);
-      } else {
-        setRecommendedMove(null);
-      }
-
-      setSignals(rawSignals || {});
+    const smoothed = {
+      emotion: hybridSmooth(prevRef.current.emotion, emotionNorm),
+      heat: hybridSmooth(prevRef.current.heat, heatNorm),
+      dominance: hybridSmooth(prevRef.current.dominance, dominanceNorm),
+      barrier: hybridSmooth(prevRef.current.barrier, barrierNorm),
     };
 
-    socket.on("interpreterUpdate", handleInterpreterUpdate);
-    return () => {
-      socket.off("interpreterUpdate", handleInterpreterUpdate);
-    };
-  }, [socket]);
+    prevRef.current = smoothed;
 
-  const remainingMs = cooldown?.remainingMs ?? cooldown?.remaining ?? 0;
-  const cooldownReady = cooldown?.ready ?? true;
-  const cooldownLabel = cooldownReady
-    ? "READY"
-    : `${Math.ceil(remainingMs / 1000)}s remaining`;
+    setTrendHistory((old) => {
+      const maxPoints = 200;
+      return {
+        emotion: [...(old.emotion || []), smoothed.emotion].slice(-maxPoints),
+        heat: [...(old.heat || []), smoothed.heat].slice(-maxPoints),
+        dominance: [...(old.dominance || []), smoothed.dominance].slice(-maxPoints),
+        barrier: [...(old.barrier || []), smoothed.barrier].slice(-maxPoints),
+      };
+    });
+  }, [state.emotion, state.heat]);
 
   return (
-    <div style={styles.panel}>
-      <div style={styles.title}>Interpreter</div>
-
-      {/* STATUS */}
-      <div style={styles.section}>
-        <div style={styles.sectionLabel}>Status</div>
-        <div style={styles.chip}>{status}</div>
+    <aside style={styles.panel}>
+      <div style={styles.headerBlock}>
+        <div style={styles.headerTitle}>Facilitator State</div>
+        <div style={styles.headerSubtitle}>Signal & emotional safety</div>
       </div>
 
-      {/* RECOMMENDED MOVE */}
-      <div style={styles.section}>
-        <div style={styles.sectionLabel}>Recommended Move</div>
-        <div style={styles.value}>
-          {recommendedMove || "No move recommended yet"}
+      <div style={styles.barsRow}>
+        <div style={styles.barWithLabel}>
+          <HeatBar heat={barHeat} />
+          <div style={styles.barLabelTop}>Signal</div>
+          <div style={styles.barLabelBottom}>intensity</div>
+        </div>
+
+        <div style={styles.barWithLabel}>
+          <EmotionBar level={barEmotion} signals={state.signals || []} />
+          <div style={styles.barLabelTop}>Emotional</div>
+          <div style={styles.barLabelBottom}>temperature</div>
         </div>
       </div>
 
-      {/* COOLDOWN */}
-      <div style={styles.section}>
-        <div style={styles.sectionLabel}>Cooldown</div>
-        <div
-          style={{
-            ...styles.cooldownChip,
-            ...(cooldownReady ? styles.cooldownReady : styles.cooldownActive),
-          }}
-        >
-          {cooldownLabel}
-        </div>
-      </div>
+      <CooldownDisplay cooldown={cooldown} />
 
-      {/* Signals (simple debug view) */}
-      {signals && Object.keys(signals).length > 0 && (
-        <div style={styles.section}>
-          <div style={styles.sectionLabel}>Signals</div>
-          <div style={styles.signalGrid}>
-            {Object.entries(signals).map(([key, value]) => (
-              <div key={key} style={styles.signalRow}>
-                <span style={styles.signalKey}>{key}</span>
-                <span style={styles.signalValue}>
-                  {typeof value === "boolean" ? (value ? "ON" : "off") : value}
-                </span>
-              </div>
-            ))}
-          </div>
-        </div>
-      )}
-    </div>
+      <div style={styles.section}>
+        <div style={styles.sectionTitle}>Emotional Trend</div>
+        <TrendlineGraph history={trendHistory} />
+      </div>
+    </aside>
   );
 }
 
 const styles = {
   panel: {
+    height: "100%",
     width: "100%",
-    padding: "1.25rem 1.5rem",
-    borderRadius: 16,
-    border: "1px solid #e5e7eb",
     background: "#ffffff",
+    borderRadius: 24,
+    boxShadow: "0 18px 45px rgba(15, 23, 42, 0.06)",
+    padding: "1.4rem 1.5rem 1.1rem 1.5rem",
+    boxSizing: "border-box",
     display: "flex",
     flexDirection: "column",
     gap: "1.25rem",
-    boxShadow: "0 8px 24px rgba(15,23,42,0.04)",
   },
-  title: {
-    fontSize: "1rem",
-    fontWeight: 700,
+  headerBlock: {
     marginBottom: "0.25rem",
   },
-  section: {
-    display: "flex",
-    flexDirection: "column",
-    gap: "0.25rem",
+  headerTitle: {
+    fontSize: "1.1rem",
+    fontWeight: 700,
+    color: "#111827",
   },
-  sectionLabel: {
-    fontSize: "0.7rem",
-    fontWeight: 600,
-    textTransform: "uppercase",
-    letterSpacing: "0.08em",
+  headerSubtitle: {
+    fontSize: "0.85rem",
     color: "#6b7280",
+    marginTop: "0.25rem",
   },
-  value: {
-    fontSize: "0.88rem",
-    color: "#111827",
+  barsRow: {
+    display: "flex",
+    gap: "3.25rem",
+    alignItems: "flex-start",
+    marginTop: "0.25rem",
+    marginBottom: "1rem",
   },
-  chip: {
-    display: "inline-flex",
-    alignItems: "center",
-    padding: "0.3rem 0.7rem",
-    borderRadius: 999,
-    background: "#eef2ff",
-    fontSize: "0.8rem",
-    color: "#111827",
-  },
-  cooldownChip: {
-    display: "inline-flex",
-    alignItems: "center",
-    padding: "0.3rem 0.7rem",
-    borderRadius: 999,
-    fontSize: "0.8rem",
-    fontWeight: 600,
-  },
-  cooldownReady: {
-    background: "#e6f7ec",
-    color: "#166534",
-  },
-  cooldownActive: {
-    background: "#fff7ed",
-    color: "#b45309",
-  },
-  signalGrid: {
+  barWithLabel: {
     display: "flex",
     flexDirection: "column",
-    gap: "0.15rem",
+    alignItems: "center",
+  },
+  barLabelTop: {
+    marginTop: "0.75rem",
+    fontSize: "0.85rem",
+    fontWeight: 600,
+    color: "#374151",
+  },
+  barLabelBottom: {
+    marginTop: "-2px",
     fontSize: "0.75rem",
-  },
-  signalRow: {
-    display: "flex",
-    justifyContent: "space-between",
-  },
-  signalKey: {
+    fontWeight: 400,
     color: "#6b7280",
   },
-  signalValue: {
+  section: {
+    marginTop: "0.5rem",
+  },
+  sectionTitle: {
+    fontSize: "0.75rem",
     fontWeight: 600,
+    marginBottom: "0.25rem",
+    color: "#4b5563",
   },
 };

@@ -1,0 +1,90 @@
+/* participantOverlay.css */
+
+.participant-overlay {
+  position: sticky;
+  top: 0;
+  z-index: 40;
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  padding: 0.65rem 0.85rem;
+  border-radius: 14px;
+  margin-bottom: 0.65rem;
+  background: rgba(255, 255, 255, 0.82);
+  backdrop-filter: blur(6px);
+  border: 1px solid rgba(148, 163, 184, 0.25);
+  box-shadow: 0 12px 30px rgba(15, 23, 42, 0.12);
+  opacity: 0;
+  transform: translateY(-6px);
+  transition: opacity 220ms ease, transform 220ms ease;
+  pointer-events: none;
+}
+
+.participant-overlay.is-visible {
+  opacity: 1;
+  transform: translateY(0);
+}
+
+.participant-overlay.is-hidden {
+  opacity: 0;
+  transform: translateY(-6px);
+}
+
+.participant-overlay .overlay-icon {
+  font-size: 1.25rem;
+  line-height: 1;
+}
+
+.participant-overlay .overlay-body {
+  display: flex;
+  flex-direction: column;
+  gap: 0.2rem;
+}
+
+.participant-overlay .overlay-label {
+  font-size: 0.85rem;
+  font-weight: 700;
+  color: #0f172a;
+}
+
+.participant-overlay .overlay-subtext {
+  font-size: 0.78rem;
+  color: #334155;
+}
+
+.participant-overlay.state-calm {
+  border-color: rgba(59, 130, 246, 0.25);
+  background: linear-gradient(
+    135deg,
+    rgba(240, 249, 255, 0.9),
+    rgba(224, 242, 254, 0.8)
+  );
+}
+
+.participant-overlay.state-confused {
+  border-color: rgba(251, 191, 36, 0.35);
+  background: linear-gradient(
+    135deg,
+    rgba(255, 247, 237, 0.88),
+    rgba(254, 243, 199, 0.78)
+  );
+}
+
+.participant-overlay.state-heat {
+  border-color: rgba(249, 115, 22, 0.4);
+  background: linear-gradient(
+    135deg,
+    rgba(255, 239, 233, 0.9),
+    rgba(255, 228, 213, 0.78)
+  );
+}
+
+.participant-overlay.state-risk {
+  border-color: rgba(248, 113, 113, 0.5);
+  background: linear-gradient(
+    135deg,
+    rgba(255, 228, 230, 0.95),
+    rgba(254, 215, 215, 0.82)
+  );
+  box-shadow: 0 14px 35px rgba(220, 38, 38, 0.18);
+}
